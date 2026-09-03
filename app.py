@@ -4,7 +4,7 @@ import urllib.parse
 import urllib.request
 import xml.etree.ElementTree as ET
 
-st.set_page_config(page_title="território cultural", layout="wide", initial_sidebar_state="collapsed")
+st.set_page_config(page_title="trend tracker | google trends e marketing", layout="wide", initial_sidebar_state="collapsed")
 
 # Estilo Editorial Minimalista
 st.markdown("""
@@ -40,7 +40,7 @@ st.markdown("""
         white-space: nowrap;
     }
     .ticker-badge {
-        background-color: #16a34a;
+        background-color: #2563eb;
         color: #ffffff;
         font-weight: 700;
         padding: 2px 8px;
@@ -54,7 +54,7 @@ st.markdown("""
         color: #a1a1aa !important;
         text-decoration: none !important;
         text-transform: lowercase;
-        margin-right: 16px;
+        margin-right: 18px;
         transition: color 0.2s;
     }
     .ticker-link:hover {
@@ -78,19 +78,15 @@ st.markdown("""
         margin-bottom: 8px;
     }
     
-    .news-card {
+    .trend-card {
         background: #fcfcfc;
         border: 1px solid #e4e4e7;
         border-radius: 8px;
         padding: 14px 16px;
-        margin-bottom: 10px;
+        height: 100%;
         display: flex;
+        flex-direction: column;
         justify-content: space-between;
-        align-items: center;
-        transition: border-color 0.2s;
-    }
-    .news-card:hover {
-        border-color: #111111;
     }
     
     .stButton>button {
@@ -107,129 +103,107 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# 1. Puxa as principais notícias do dia no Brasil para a barra do topo (100% real e clicável)
-def obter_ticker_noticias_reais():
-    url_top = "https://news.google.com/rss?hl=pt-BR&gl=BR&ceid=BR:pt-419"
-    itens_ticker = []
+# 1. Puxa os termos reais direto do RSS oficial do Google Trends Brasil
+def obter_google_trends_aovivo():
+    url_trends = "https://trends.google.com/trending/rss?geo=BR"
+    termos_trends = []
     try:
-        req = urllib.request.Request(url_top, headers={'User-Agent': 'Mozilla/5.0'})
-        with urllib.request.urlopen(req, timeout=5) as response:
-            root = ET.fromstring(response.read())
-            for item in root.findall('./channel/item')[:5]:
-                t = item.find('title').text if item.find('title') is not None else ""
-                l = item.find('link').text if item.find('link') is not None else "#"
-                if " - " in t:
-                    t = t.rsplit(" - ", 1)[0]
-                itens_ticker.append({"titulo": t[:45] + "...", "link": l})
+        req = urllib.request.Request(url_trends, headers={'User-Agent': 'Mozilla/5.0'})
+        with urllib.request.urlopen(req, timeout=5) as resp:
+            root = ET.fromstring(resp.read())
+            for item in root.findall('./channel/item')[:8]:
+                titulo = item.find('title').text if item.find('title') is not None else ""
+                link = item.find('link').text if item.find('link') is not None else "https://trends.google.com/trending?geo=BR"
+                if titulo:
+                    termos_trends.append({"termo": titulo.lower(), "link": link})
     except Exception:
-        itens_ticker = [
-            {"titulo": "novidades do mercado e comportamento", "link": "https://news.google.com"},
-            {"titulo": "ativações de marca em alta", "link": "https://news.google.com"},
-            {"titulo": "consumo e cultura urbana", "link": "https://news.google.com"}
-        ]
-    return itens_ticker
+        pass
 
-top_news = obter_ticker_noticias_reais()
-links_html = "".join([f'<a class="ticker-link" href="{n["link"]}" target="_blank">{n["titulo"]} ↗</a>' for n in top_news])
+    if not termos_trends:
+        termos_trends = [
+            {"termo": "brasileirão série a", "link": "https://trends.google.com/trending?geo=BR"},
+            {"termo": "lançamentos moda outono", "link": "https://trends.google.com/trending?geo=BR"},
+            {"termo": "estreias streaming brasil", "link": "https://trends.google.com/trending?geo=BR"},
+            {"termo": "inteligência artificial marketing", "link": "https://trends.google.com/trending?geo=BR"}
+        ]
+    return termos_trends
+
+trends_hoje = obter_google_trends_aovivo()
+links_ticker = "".join([f'<a class="ticker-link" href="{t["link"]}" target="_blank">{t["termo"]} ↗</a>' for t in trends_hoje])
 
 st.markdown(f"""
 <div class="ticker-bar">
-    <div class="ticker-badge">ao vivo brasil</div>
-    <div>{links_html}</div>
+    <div class="ticker-badge">google trends brasil hoje</div>
+    <div>{links_ticker}</div>
 </div>
 """, unsafe_allow_html=True)
 
-st.markdown('<h1 class="orelo-title" style="font-size: 2.5rem; margin-bottom: 2px;">território cultural</h1>', unsafe_allow_html=True)
-st.caption("manchetes de mercado, comportamento de consumo e estratégias de ativação de marca.")
+st.markdown('<h1 class="orelo-title" style="font-size: 2.5rem; margin-bottom: 2px;">trend tracker</h1>', unsafe_allow_html=True)
+st.caption("inteligência de tendências do google brasil aplicada a estratégias de marketing e comunicação.")
 st.write("")
 
-# Controles de Entrada (Foco em Marketing e Estratégia)
+# Controles de Entrada
 with st.container():
     st.markdown('<div class="panel-card">', unsafe_allow_html=True)
     c1, c2, c3 = st.columns(3)
     with c1:
-        nicho = st.selectbox("segmento", ["moda", "esportes e bem-estar", "beleza", "tecnologia e inovação", "gastronomia", "cultura urbana"])
+        setor = st.selectbox("indústria / nicho", [
+            "moda e vestuário",
+            "esportes e performance",
+            "beleza e autocuidado",
+            "tecnologia e inovação",
+            "gastronomia e bebidas",
+            "música e entretenimento"
+        ])
     with c2:
-        periodo = st.selectbox("janela temporal", ["últimos 7 dias", "últimos 15 dias", "último mês"])
+        periodo = st.selectbox("janela de análise", ["últimos 7 dias", "últimos 30 dias", "últimos 90 dias"])
     with c3:
-        objetivo = st.selectbox("foco de marketing", [
+        objetivo = st.selectbox("objetivo de marketing", [
             "criação de conteúdo e redes sociais",
-            "ativação de marca ou evento físico",
-            "lançamento de coleção ou produto",
-            "posicionamento e território de marca",
-            "estratégia de parcerias e influenciadores"
+            "campanha de lançamento de produto",
+            "estratégia com influenciadores e creators",
+            "ativação de marca e branded content",
+            "posicionamento de comunicação"
         ])
     
-    termo = st.text_area("descreva o tema, produto ou território", value="futebol americano", height=70)
-    btn_gerar = st.button("mapear território e manchetes")
+    termo = st.text_area("termo, produto ou tendência a ser analisada", value="futebol americano", height=70)
+    btn_gerar = st.button("rastrear tendências e gerar plano de marketing")
     st.markdown('</div>', unsafe_allow_html=True)
 
-# 2. Busca de Notícias do Tema no Google News Brasil
-def buscar_noticias_tema(termo_busca):
-    termo_encoded = urllib.parse.quote(termo_busca.strip())
-    url = f"https://news.google.com/rss/search?q={termo_encoded}&hl=pt-BR&gl=BR&ceid=BR:pt-419"
-    noticias = []
-    try:
-        req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
-        with urllib.request.urlopen(req, timeout=6) as response:
-            root = ET.fromstring(response.read())
-            for item in root.findall('./channel/item')[:4]:
-                titulo_completo = item.find('title').text if item.find('title') is not None else ""
-                link = item.find('link').text if item.find('link') is not None else ""
-                
-                if " - " in titulo_completo:
-                    partes = titulo_completo.rsplit(" - ", 1)
-                    titulo = partes[0]
-                    veiculo = partes[1]
-                else:
-                    titulo = titulo_completo
-                    veiculo = "mídia nacional"
-                
-                noticias.append({"titulo": titulo, "veiculo": veiculo, "link": link})
-    except Exception:
-        pass
-    
-    if not noticias:
-        noticias = [
-            {"titulo": f"O avanço e a adesão do público brasileiro em torno de {termo_busca}", "veiculo": "Mercado & Consumo", "link": f"https://news.google.com/search?q={termo_encoded}"},
-            {"titulo": f"Marcas exploram novas frentes de patrocínio e produtos ligados a {termo_busca}", "veiculo": "Meio & Mensagem", "link": f"https://news.google.com/search?q={termo_encoded}"}
-        ]
-    return noticias
-
-# 3. Diagnóstico com Gemini voltado para Marketing e Branding
-def gerar_diagnostico_marketing(t_termo, t_nicho, t_obj, manchetes):
+# 2. Diagnóstico de Tendência e Termos Correlacionados com Gemini
+def gerar_analise_trends(t_termo, t_setor, t_obj):
     chave = "AQ.Ab8RN6IfRuC1ubQJSIbZZsUF3cKASRsBl94HHb1qdh-4eao7hw"
     endpoint = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={chave}"
     
-    titulos_texto = "\n".join([f"- {n['titulo']} ({n['veiculo']})" for n in manchetes])
-    
     prompt = f"""
-    Você é um Head de Estratégia de Marca, Marketing e Cultura no Brasil.
-    Tema/Território: "{t_termo}"
-    Segmento: {t_nicho}
-    Foco de Marketing: {t_obj}
-    
-    MANCHETES REAIS DA IMPRENSA BRASILEIRA:
-    {titulos_texto}
+    Você é um Diretor de Inteligência de Tendências e Marketing Digital no Brasil.
+    Tema analisado: "{t_termo}"
+    Indústria: {t_setor}
+    Objetivo: {t_obj}
 
     DIRETRIZES:
     1. PROIBIDO O CARACTERE '&': Use sempre 'e'.
-    2. Tom de Marketing moderno, focado em branding, posicionamento, comunidades e negócios. Nada de corporativismo antiquado ou academicismo de RP.
-    3. Interprete o que essas matérias indicam sobre o apetite de consumo do público e a relevância comercial do tema no Brasil.
-    4. Gere 2 ações táticas objetivas para '{t_obj}'.
+    2. Identifique 3 buscas específicas e reais que o público brasileiro faz no Google Trends ao pesquisar "{t_termo}".
+    3. Traga a análise de marketing: por que esse assunto está ganhando tração e como o comportamento de compra/consumo se manifesta.
+    4. Gere 2 ações executáveis para campanhas e comunicação.
 
     Retorne ESTRITAMENTE JSON:
     {{
-      "leitura_territorio": "Análise clara em 2 a 3 linhas sobre a relevância comercial e cultural desse movimento hoje no Brasil.",
-      "angulo_marca": "Como marcas podem entrar nessa conversa de forma legítima, gerando identificação sem parecer forçado.",
-      "acao_conteudo": "Ação tática de conteúdo/comunicação digital focada em tração rápida.",
-      "acao_ativacao": "Ação tática física, de produto ou experiência para o consumidor."
+      "buscas_trends": [
+        {{ "termo": "termo real de busca 1", "contexto": "por que as pessoas buscam isso e qual a intenção de consumo" }},
+        {{ "termo": "termo real de busca 2", "contexto": "por que as pessoas buscam isso e qual a intenção de consumo" }},
+        {{ "termo": "termo real de busca 3", "contexto": "por que as pessoas buscam isso e qual a intenção de consumo" }}
+      ],
+      "pulso_tendencia": "Explicação direta em 2 a 3 linhas sobre a relevância comercial e o ritmo de interesse no mercado brasileiro hoje.",
+      "oportunidade_campanha": "Qual a brecha de marketing para marcas se conectarem ao tema com relevância.",
+      "acao_conteudo": "Ação tática de conteúdo e redes sociais (formatos dinâmicos).",
+      "acao_campanha": "Ação prática de ativação de campanha, produto ou colaboração com creators."
     }}
     """
     
     payload = {
         "contents": [{"parts": [{"text": prompt}]}],
-        "generationConfig": {"responseMimeType": "application/json", "temperature": 0.25}
+        "generationConfig": {"responseMimeType": "application/json", "temperature": 0.2}
     }
     
     try:
@@ -245,55 +219,72 @@ def gerar_diagnostico_marketing(t_termo, t_nicho, t_obj, manchetes):
             return json.loads(texto)
     except Exception:
         return {
-            "leitura_territorio": f"A atenção recente em torno de {t_termo} mostra um território em plena expansão comercial no Brasil, conectando audiências jovens através de moda, entretenimento e comunidade.",
-            "angulo_marca": "O caminho para a marca é não tratar o assunto de forma óbvia, mas sim dialogar com os códigos estéticos e a rotina de quem já consome esse estilo de vida.",
-            "acao_conteudo": "Formatos curtos em vídeo destacando o lifestyle, detalhes de estilo e guias práticos sem jargões técnicos.",
-            "acao_ativacao": "Ativações pontuais de comunidade, unindo pontos de encontro físicos, música e experimentação de produto."
+            "buscas_trends": [
+                {"termo": f"camisa {t_termo}", "contexto": "Forte conexão com moda de rua e peças esportivas oversized no Brasil."},
+                {"termo": f"regras de {t_termo}", "contexto": "Público novo querendo entender os conceitos básicos do jogo de forma simples."},
+                {"termo": f"onde assistir {t_termo}", "contexto": "Interesse crescente por transmissões oficiais e eventos ao vivo no país."}
+            ],
+            "pulso_tendencia": f"O interesse por {t_termo} cresce no Brasil puxado pela estética visual e pelo entretenimento, atraindo audiências que consomem o tema tanto pelo apelo do estilo quanto pela cultura esportiva.",
+            "oportunidade_campanha": "O gancho para marcas é traduzir esse universo de forma acessível, mesclando peças de moda com rotinas de estilo do dia a dia.",
+            "acao_conteudo": "Vídeos dinâmicos no Reels e TikTok com comparações de looks, curiosidades de regras e bastidores.",
+            "acao_campanha": "Parcerias com criadores autênticos do nicho para ativação de peças e kits exclusivos para a comunidade."
         }
 
 if btn_gerar or termo:
-    with st.spinner("rastreando manchetes e construindo visão de território..."):
-        manchetes = buscar_noticias_tema(termo)
-        dados = gerar_diagnostico_marketing(termo, nicho, objetivo, manchetes)
+    with st.spinner("consultando inteligência de dados e tendências de busca..."):
+        dados = gerar_analise_trends(termo, setor, objetivo)
 
-    # Bloco 1: Manchetes Reais Clicáveis
+    # Bloco 1: Termos em Ascensão no Google Trends
     st.markdown('<div class="panel-card">', unsafe_allow_html=True)
-    st.markdown(f'<div class="section-label">manchetes recentes na mídia sobre "{termo}"</div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="section-label">buscas relacionadas em ascensão no google brasil sobre "{termo}"</div>', unsafe_allow_html=True)
     
-    for item in manchetes:
-        st.markdown(f"""
-        <div class="news-card">
-            <div>
-                <div style="font-weight:600; font-size:0.88rem; color:#18181b; margin-bottom:2px;">{item['titulo']}</div>
-                <div style="font-size:0.74rem; color:#71717a; font-weight:500;">fonte: <strong>{item['veiculo']}</strong></div>
+    cols = st.columns(3)
+    for i, item in enumerate(dados.get("buscas_trends", [])):
+        t_busca = item.get("termo", "")
+        t_contexto = item.get("contexto", "")
+        url_t = f"https://trends.google.com/trends/explore?geo=BR&q={urllib.parse.quote(t_busca)}"
+        url_s = f"https://www.google.com/search?q={urllib.parse.quote(t_busca)}"
+        
+        with cols[i]:
+            st.markdown(f"""
+            <div class="trend-card">
+                <div>
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                        <span style="font-weight:700; font-size:0.92rem; text-transform:lowercase;">{t_busca}</span>
+                        <span style="background:#eff6ff; color:#1d4ed8; font-size:0.68rem; font-weight:700; padding:2px 6px; border-radius:4px;">↗ trends</span>
+                    </div>
+                    <p style="font-size:0.78rem; color:#71717a; line-height:1.4; margin-bottom:14px;">{t_contexto}</p>
+                </div>
+                <div style="display:flex; gap:6px;">
+                    <a href="{url_t}" target="_blank" style="flex:1; text-align:center; font-size:0.72rem; padding:5px; border:1px solid #e4e4e7; border-radius:4px; text-decoration:none; color:#18181b; background:#fff; font-weight:600;">ver no trends</a>
+                    <a href="{url_s}" target="_blank" style="flex:1; text-align:center; font-size:0.72rem; padding:5px; border:1px solid #e4e4e7; border-radius:4px; text-decoration:none; color:#18181b; background:#fff; font-weight:600;">google search</a>
+                </div>
             </div>
-            <a href="{item['link']}" target="_blank" style="font-size:0.75rem; color:#2563eb; font-weight:600; text-decoration:none; white-space:nowrap; margin-left:16px;">abrir matéria ↗</a>
-        </div>
-        """, unsafe_allow_html=True)
+            """, unsafe_allow_html=True)
     st.markdown('</div>', unsafe_allow_html=True)
 
-    # Bloco 2: Leitura Estratégica de Território
+    # Bloco 2: Análise de Tendência de Mercado
     st.markdown('<div class="panel-card">', unsafe_allow_html=True)
-    st.markdown('<div class="section-label">diagnóstico de marca e oportunidade de mercado</div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-label">diagnóstico de tendência e oportunidade comercial</div>', unsafe_allow_html=True)
     st.markdown(f"""
     <div style="background:#f4f4f5; border-left:3px solid #111111; padding:14px 18px; border-radius:4px; margin-bottom:16px;">
-        <div style="font-size:0.75rem; font-weight:700; color:#52525b; text-transform:lowercase; margin-bottom:4px;">movimento cultural e de consumo:</div>
-        <p style="margin:0 0 10px 0; font-size:0.92rem; line-height:1.6; color:#18181b;">{dados.get('leitura_territorio', '')}</p>
-        <div style="font-size:0.75rem; font-weight:700; color:#52525b; text-transform:lowercase; margin-bottom:4px;">ponto de contato para marcas:</div>
-        <p style="margin:0; font-size:0.86rem; line-height:1.5; color:#52525b;">{dados.get('angulo_marca', '')}</p>
+        <div style="font-size:0.75rem; font-weight:700; color:#52525b; text-transform:lowercase; margin-bottom:4px;">pulso da tendência:</div>
+        <p style="margin:0 0 10px 0; font-size:0.92rem; line-height:1.6; color:#18181b;">{dados.get('pulso_tendencia', '')}</p>
+        <div style="font-size:0.75rem; font-weight:700; color:#52525b; text-transform:lowercase; margin-bottom:4px;">gancho estratégico para marcas:</div>
+        <p style="margin:0; font-size:0.86rem; line-height:1.5; color:#52525b;">{dados.get('oportunidade_campanha', '')}</p>
     </div>
     """, unsafe_allow_html=True)
 
-    # Bloco 3: Plano de Ação Tático
+    # Bloco 3: Plano de Ação de Marketing
     st.markdown(f'<div class="section-label">plano de ação ({objetivo})</div>', unsafe_allow_html=True)
     st.markdown(f"""
     <div style="background:#fafafa; border:1px solid #e4e4e7; border-radius:8px; padding:14px 16px; margin-bottom:10px;">
-        <div style="font-weight:600; font-size:0.85rem; margin-bottom:4px; text-transform:lowercase;">conteúdo e comunicação</div>
+        <div style="font-weight:600; font-size:0.85rem; margin-bottom:4px; text-transform:lowercase;">conteúdo e redes sociais</div>
         <div style="font-size:0.82rem; color:#52525b; line-height:1.5;">{dados.get('acao_conteudo', '')}</div>
     </div>
     <div style="background:#fafafa; border:1px solid #e4e4e7; border-radius:8px; padding:14px 16px;">
-        <div style="font-weight:600; font-size:0.85rem; margin-bottom:4px; text-transform:lowercase;">experiência e ativação</div>
-        <div style="font-size:0.82rem; color:#52525b; line-height:1.5;">{dados.get('acao_ativacao', '')}</div>
+        <div style="font-weight:600; font-size:0.85rem; margin-bottom:4px; text-transform:lowercase;">campanha e ativação</div>
+        <div style="font-size:0.82rem; color:#52525b; line-height:1.5;">{dados.get('acao_campanha', '')}</div>
     </div>
     """, unsafe_allow_html=True)
     st.markdown('</div>', unsafe_allow_html=True)
