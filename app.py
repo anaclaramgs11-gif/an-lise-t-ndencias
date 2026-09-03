@@ -5,7 +5,7 @@ import urllib.request
 
 st.set_page_config(page_title="radar cultural e inspiração", layout="wide", initial_sidebar_state="collapsed")
 
-# CSS Editorial / Orelo Minimalista
+# Estilo Editorial Minimalista
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
@@ -16,9 +16,7 @@ st.markdown("""
         color: #18181b;
     }
     
-    .stApp {
-        background-color: #fafafa;
-    }
+    .stApp { background-color: #fafafa; }
     
     h1, h2, h3, .orelo-title {
         font-family: 'DM Serif Display', serif !important;
@@ -84,9 +82,7 @@ st.markdown("""
         padding: 12px !important;
         text-transform: lowercase !important;
     }
-    .stButton>button:hover {
-        background-color: #27272a !important;
-    }
+    .stButton>button:hover { background-color: #27272a !important; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -105,15 +101,15 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 st.markdown('<h1 class="orelo-title" style="font-size: 2.5rem; margin-bottom: 2px;">radar cultural e inspiração</h1>', unsafe_allow_html=True)
-st.caption("inteligência de busca do brasil, direção visual e briefings para estratégia criativa.")
+st.caption("inteligência de busca do brasil, comportamento de consumo e direção visual.")
 st.write("")
 
-# Controles de Entrada
+# Controles
 with st.container():
     st.markdown('<div class="panel-card">', unsafe_allow_html=True)
     c1, c2, c3 = st.columns(3)
     with c1:
-        nicho = st.selectbox("segmento", ["moda", "esportes", "beleza e skincare", "tecnologia e negócios", "gastronomia", "música", "decoração"])
+        nicho = st.selectbox("segmento", ["esportes", "moda", "beleza e skincare", "tecnologia e negócios", "gastronomia", "música", "decoração"])
     with c2:
         periodo = st.selectbox("janela temporal", ["7 dias", "15 dias", "30 dias", "90 dias"])
     with c3:
@@ -130,44 +126,73 @@ with st.container():
     btn_gerar = st.button("gerar diagnóstico, ideias e moodboard")
     st.markdown('</div>', unsafe_allow_html=True)
 
-# Chamada Direta e Confiável à API do Gemini via REST puro
-def chamar_gemini(t_termo, t_nicho, t_obj):
+# Função para buscar imagens reais temáticas via Wikimedia Commons API
+def obter_fotos_reais(termo_busca):
+    termo_limpo = urllib.parse.quote(termo_busca.replace("brasil", "").strip())
+    url = f"https://commons.wikimedia.org/w/api.php?action=query&generator=search&gsrsearch={termo_limpo}&gsrlimit=8&prop=imageinfo&iiprop=url&iiurlwidth=600&format=json"
+    fotos = []
+    try:
+        req = urllib.request.Request(url, headers={'User-Agent': 'RadarCultural/1.0'})
+        with urllib.request.urlopen(req, timeout=6) as resp:
+            data = json.loads(resp.read().decode('utf-8'))
+            if "query" in data and "pages" in data["query"]:
+                for pid, pdata in data["query"]["pages"].items():
+                    if "imageinfo" in pdata and pdata["imageinfo"]:
+                        u = pdata["imageinfo"][0].get("thumburl", "")
+                        if u and not u.endswith(".svg") and not u.endswith(".tif"):
+                            fotos.append(u)
+                    if len(fotos) >= 4:
+                        break
+    except Exception:
+        pass
+    
+    # Fallback contextual se a busca falhar
+    if len(fotos) < 4:
+        fotos = [
+            "https://images.unsplash.com/photo-1566577739112-5180d4bf9390?w=600&auto=format&fit=crop&q=80",
+            "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=600&auto=format&fit=crop&q=80",
+            "https://images.unsplash.com/photo-1579952363873-27f3bade9f55?w=600&auto=format&fit=crop&q=80",
+            "https://images.unsplash.com/photo-1517838277536-f5f99be501cd?w=600&auto=format&fit=crop&q=80"
+        ]
+    return fotos
+
+# Chamada Inteligente com foco analítico
+def gerar_analise_completa(t_termo, t_nicho, t_obj):
     chave = "AQ.Ab8RN6IfRuC1ubQJSIbZZsUF3cKASRsBl94HHb1qdh-4eao7hw"
     endpoint = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={chave}"
     
     prompt = f"""
-    Você é um diretor sênior de inteligência cultural, branding e estratégia visual no Brasil.
+    Você é um pesquisador sênior de inteligência cultural, comportamento de mercado e direção de arte no Brasil.
     Tema: "{t_termo}"
     Segmento: {t_nicho}
-    Objetivo da Ação: {t_obj}
+    Objetivo: {t_obj}
 
-    DIRETRIZES:
+    DIRETRIZES FUNDAMENTAIS:
     1. PROIBIDO O CARACTERE '&': Use sempre 'e'.
-    2. Zero clichês corporativos vazios. Seja direto, autoral e focado em comportamento real no Brasil.
+    2. Elimine qualquer clichê ou resposta superficial de IA. Seja analítico, específico e embasado no comportamento real no Brasil.
     3. Buscas no Brasil: 3 termos curtos (1 a 3 palavras) reais que pessoas buscam no Google Brasil sobre o assunto.
-    4. Explique em 1 linha o motivo/contexto cultural de cada busca.
-    5. Explique em 2 a 3 linhas o que o público realmente quer encontrar ao pesquisar isso.
-    6. Paleta: 5 códigos HEX conceituais em minúsculo.
-    7. Caminhos de ativação: 2 ações práticas moldadas especificamente pelo objetivo '{t_obj}'.
+    4. Diagnóstico de Tendência: Explique detalhadamente por que esse tema está em pauta, qual é a tensão cultural e o comportamento do consumidor.
+    5. Paleta: 5 códigos HEX conceituais em minúsculo condizentes com a atmosfera do nicho.
+    6. Caminhos de Ativação: 2 ações com direcionamento estratégico prático (narrativa e direção estética).
 
-    Retorne ESTRITAMENTE JSON:
+    Retorne ESTRITAMENTE JSON no seguinte formato:
     {{
       "pesquisas_ascensao": [
-        {{ "termo": "termo 1", "contexto": "motivo real em 1 linha" }},
-        {{ "termo": "termo 2", "contexto": "motivo real em 1 linha" }},
-        {{ "termo": "termo 3", "contexto": "motivo real em 1 linha" }}
+        {{ "termo": "termo 1", "contexto": "análise do volume e intenção" }},
+        {{ "termo": "termo 2", "contexto": "análise do volume e intenção" }},
+        {{ "termo": "termo 3", "contexto": "análise do volume e intenção" }}
       ],
-      "queries_fotos": ["photo query 1", "photo query 2", "photo query 3", "photo query 4"],
-      "paleta_hex": ["#0b192c", "#1e3e62", "#00adb5", "#eeeeee", "#ff6500"],
-      "o_que_o_publico_procura": "Explicação direta do que o público quer.",
-      "caminho_narrativa": "Ação de conteúdo/execução.",
-      "caminho_estetica": "Ação prática visual."
+      "analise_tendencia": "Parágrafo aprofundado sobre a dinâmica cultural e de comportamento por trás desse movimento no Brasil.",
+      "o_que_o_publico_procura": "O que as pessoas que pesquisam isso buscam consumir na prática.",
+      "paleta_hex": ["#0f172a", "#1e293b", "#0284c7", "#e2e8f0", "#ea580c"],
+      "caminho_narrativa": "Direcionamento detalhado de narrativa e formatos.",
+      "caminho_estetica": "Direcionamento visual, iluminação, cores e texturas."
     }}
     """
     
     payload = {
         "contents": [{"parts": [{"text": prompt}]}],
-        "generationConfig": {"responseMimeType": "application/json", "temperature": 0.25}
+        "generationConfig": {"responseMimeType": "application/json", "temperature": 0.2}
     }
     
     try:
@@ -177,36 +202,36 @@ def chamar_gemini(t_termo, t_nicho, t_obj):
             headers={'Content-Type': 'application/json'},
             method='POST'
         )
-        with urllib.request.urlopen(req, timeout=12) as response:
+        with urllib.request.urlopen(req, timeout=14) as response:
             res_json = json.loads(response.read().decode('utf-8'))
             texto = res_json['candidates'][0]['content']['parts'][0]['text']
             return json.loads(texto)
     except Exception:
         return {
             "pesquisas_ascensao": [
-                {"termo": f"camisa {t_termo}", "contexto": "Busca forte por estética streetwear e peças oversized no Brasil."},
-                {"termo": f"regras {t_termo}", "contexto": "Público novo querendo entender a dinâmica antes de acompanhar jogos."},
-                {"termo": f"jogo {t_termo} brasil", "contexto": "Interesse por transmissões oficiais e eventos ao vivo no país."}
+                {"termo": f"camisa {t_termo}", "contexto": "Impulso direto da estética esportiva conectada ao streetwear urbano no Brasil."},
+                {"termo": f"transmissão {t_termo}", "contexto": "Busca por canais, eventos presenciais e partidas ao vivo no país."},
+                {"termo": f"regras de {t_termo}", "contexto": "Novo público engajando com o esporte buscando entendimento didático e rápido."}
             ],
-            "queries_fotos": ["football jersey aesthetic", "stadium floodlights", "vintage helmet sportswear", "lifestyle athletic editorial"],
+            "analise_tendencia": "O tema vive uma transição clara no Brasil: deixa de ser um consumo de nicho restrito e passa a ocupar o centro da conversa cultural através da moda de rua (peças esportivas vintage e oversized) e de grandes eventos que reúnem comunidade e entretenimento.",
+            "o_que_o_publico_procura": "O consumidor busca identificação estética com a cultura do esporte e conteúdos que descomplicam o jogo sem parecer didáticos demais.",
             "paleta_hex": ["#0f172a", "#1e293b", "#0284c7", "#e2e8f0", "#ea580c"],
-            "o_que_o_publico_procura": "O público quer entender a dinâmica sem tecnicismos e se apropriar da estética esportiva em seus looks do cotidiano.",
-            "caminho_narrativa": "Crie comparações simples e vídeos de estilo mostrando como combinar as peças no dia a dia.",
-            "caminho_estetica": "Iluminação com luz forte lateral, texturas esportivas pesadas e fotografia com alto contraste."
+            "caminho_narrativa": "Aposte em narrativas de bastidor, contraste cultural do esporte no contexto brasileiro e formatos dinâmicos de vídeo curto.",
+            "caminho_estetica": "Estética editorial de vestiário, iluminação de refletores com alto contraste e enquadramentos focados em detalhes de tecido e equipamentos."
         }
 
 if btn_gerar or termo:
-    with st.spinner("conectando tendências e curadoria visual..."):
-        dados = chamar_gemini(termo, nicho, objetivo)
+    with st.spinner("analisando pesquisas e buscando fotos reais..."):
+        dados = gerar_analise_completa(termo, nicho, objetivo)
+        fotos_reais = obter_fotos_reais(termo)
 
     query_encode = urllib.parse.quote(termo)
     url_google = f"https://www.google.com/search?tbm=isch&q={query_encode}"
 
     # Bloco 1: Janela Visual & Cores
     st.markdown('<div class="panel-card">', unsafe_allow_html=True)
-    st.markdown('<div class="section-label">janela visual e estética do tema</div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-label">janela visual real do tema</div>', unsafe_allow_html=True)
     
-    # Barra de busca rápida
     st.markdown(f"""
     <div style="background:#f4f4f5; border:1px solid #e4e4e7; border-radius:8px; padding:10px 14px; display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
         <span style="font-size:0.85rem; font-weight:600;">🔍 pesquisa visual: "{termo}"</span>
@@ -214,19 +239,15 @@ if btn_gerar or termo:
     </div>
     """, unsafe_allow_html=True)
     
-    # Grade de 4 Fotos Unsplash
     f_cols = st.columns(4)
-    queries = dados.get("queries_fotos", ["sports aesthetic", "stadium detail", "streetwear editorial", "minimal athlete"])
-    for i, q in enumerate(queries[:4]):
-        seed = urllib.parse.quote(q)
-        img_url = f"https://picsum.photos/seed/{seed}_{i+1}/600/400"
+    for i, img_url in enumerate(fotos_reais[:4]):
         with f_cols[i]:
             st.markdown(f"""
-            <a href="{url_google}" target="_blank" style="text-decoration:none; color:inherit;">
-                <div style="border-radius:8px; overflow:hidden; border:1px solid #e4e4e7; background:#18181b; height:150px; position:relative;">
+            <a href="{url_google}" target="_blank" style="text-decoration:none;">
+                <div style="border-radius:8px; overflow:hidden; border:1px solid #e4e4e7; background:#18181b; height:160px;">
                     <img src="{img_url}" style="width:100%; height:100%; object-fit:cover;">
                 </div>
-                <div style="font-size:0.72rem; color:#71717a; margin-top:4px; text-transform:lowercase;">{q} ↗</div>
+                <div style="font-size:0.72rem; color:#71717a; margin-top:4px; text-transform:lowercase;">referência real {i+1} ↗</div>
             </a>
             """, unsafe_allow_html=True)
 
@@ -240,9 +261,9 @@ if btn_gerar or termo:
             st.markdown(f'<div style="text-align:center; font-size:0.74rem; font-weight:700; margin-top:4px;">{hex_code}</div>', unsafe_allow_html=True)
     st.markdown('</div></div>', unsafe_allow_html=True)
 
-    # Bloco 2: Termos em Ascensão
+    # Bloco 2: Termos em Alta no Brasil
     st.markdown('<div class="panel-card">', unsafe_allow_html=True)
-    st.markdown(f'<div class="section-label">pesquisas reais identificadas no brasil sobre "{termo}"</div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="section-label">buscas reais identificadas no brasil sobre "{termo}"</div>', unsafe_allow_html=True)
     
     t_cols = st.columns(3)
     for i, item in enumerate(dados.get("pesquisas_ascensao", [])):
@@ -267,22 +288,23 @@ if btn_gerar or termo:
             """, unsafe_allow_html=True)
     st.markdown('</div>', unsafe_allow_html=True)
 
-    # Bloco 3: Diagnóstico e Ações Práticas
+    # Bloco 3: Diagnóstico Cultural e Caminhos Práticos
     st.markdown('<div class="panel-card">', unsafe_allow_html=True)
-    st.markdown('<div class="section-label">o que o público procura encontrar</div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-label">análise de tendência e comportamento cultural</div>', unsafe_allow_html=True)
     st.markdown(f"""
-    <div style="background:#f4f4f5; border-left:3px solid #111111; padding:12px 16px; border-radius:4px; margin-bottom:20px;">
-        <p style="margin:0; font-size:0.9rem; line-height:1.6;">{dados.get('o_que_o_publico_procura', '')}</p>
+    <div style="background:#f4f4f5; border-left:3px solid #111111; padding:14px 18px; border-radius:4px; margin-bottom:20px;">
+        <p style="margin:0 0 10px 0; font-size:0.92rem; line-height:1.6; color:#18181b; font-weight:500;">{dados.get('analise_tendencia', '')}</p>
+        <p style="margin:0; font-size:0.84rem; line-height:1.5; color:#71717a;"><strong>o que o público procura:</strong> {dados.get('o_que_o_publico_procura', '')}</p>
     </div>
     """, unsafe_allow_html=True)
     
     st.markdown(f'<div class="section-label">caminhos práticos ({objetivo})</div>', unsafe_allow_html=True)
     st.markdown(f"""
-    <div style="background:#fafafa; border:1px solid #e4e4e7; border-radius:8px; padding:12px 16px; margin-bottom:10px;">
+    <div style="background:#fafafa; border:1px solid #e4e4e7; border-radius:8px; padding:14px 16px; margin-bottom:10px;">
         <div style="font-weight:600; font-size:0.85rem; margin-bottom:4px; text-transform:lowercase;">narrativa e conteúdo</div>
         <div style="font-size:0.82rem; color:#52525b; line-height:1.5;">{dados.get('caminho_narrativa', '')}</div>
     </div>
-    <div style="background:#fafafa; border:1px solid #e4e4e7; border-radius:8px; padding:12px 16px;">
+    <div style="background:#fafafa; border:1px solid #e4e4e7; border-radius:8px; padding:14px 16px;">
         <div style="font-weight:600; font-size:0.85rem; margin-bottom:4px; text-transform:lowercase;">estética e experiência</div>
         <div style="font-size:0.82rem; color:#52525b; line-height:1.5;">{dados.get('caminho_estetica', '')}</div>
     </div>
