@@ -5,12 +5,12 @@ import urllib.request
 import xml.etree.ElementTree as ET
 import streamlit.components.v1 as components
 
-st.set_page_config(page_title="radar | o que você precisa saber", layout="wide", initial_sidebar_state="collapsed")
+st.set_page_config(page_title="radar de tendências", layout="wide", initial_sidebar_state="collapsed")
 
-# Token oficial
+# Token de autenticação
 CHAVE_API = st.secrets.get("GEMINI_API_KEY", "AQ.Ab8RN6K0s7oAWASVyRJlyQSTV1aFotsEN-mJEmcDO2Xxo_OULg")
 
-# Estilo Editorial com Letreiro Animado tipo Painel de Aeroporto
+# Estilo Editorial Minimalista (Sem caixas vazias, paleta marrom/café)
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
@@ -31,7 +31,7 @@ st.markdown("""
         color: #241a15 !important;
     }
     
-    /* Painel estilo aeroporto / bolsa de valores com animação contínua */
+    /* Painel estilo aeroporto animado */
     .airport-wrapper {
         background-color: #2b211b;
         color: #f5efe6;
@@ -67,13 +67,13 @@ st.markdown("""
         100% { transform: translateX(-50%); }
     }
     .airport-item {
-        color: #d1bfae;
-        text-decoration: none;
-        margin-right: 24px;
+        color: #d1bfae !important;
+        text-decoration: none !important;
+        margin-right: 26px;
         font-size: 0.78rem;
         font-weight: 500;
     }
-    .airport-item:hover { color: #ffffff; }
+    .airport-item:hover { color: #ffffff !important; }
     
     .card {
         background: #ffffff;
@@ -91,6 +91,16 @@ st.markdown("""
         font-weight: 700;
         color: #8c5835;
         margin-bottom: 8px;
+    }
+    
+    .overview-box {
+        background: #fdfbf9;
+        border-left: 3px solid #8c5835;
+        padding: 16px 18px;
+        border-radius: 6px;
+        font-size: 0.95rem;
+        line-height: 1.65;
+        color: #2b211b;
     }
     
     .news-card {
@@ -120,11 +130,11 @@ st.markdown("""
 
 # Segmentos estruturados
 SEGMENTOS = {
-    "moda e calçados": ["sapatilha", "melissa", "bermuda jorts", "calça balonê", "alfaiataria oversized"],
-    "beleza e estética": ["blush blindness", "skincare minimalista", "rotina glow", "lip tint"],
-    "esportes e corrida": ["tênis de placa de carbono", "corrida de rua 10k", "suplementação creatina", "maiô natação"],
+    "moda e vestuário": ["sapatilha", "melissa", "bermuda jorts", "calça balonê", "alfaiataria oversized"],
+    "esportes e corrida": ["vôlei", "tênis de placa de carbono", "corrida de rua 10k", "suplementação creatina", "maiô natação"],
+    "beleza e estética": ["blush blindness", "skincare minimalista", "rotina glow", "lip tint natural"],
     "cultura e internet": ["aesthetic anos 2000", "brat summer", "futebol feminino", "girias do tiktok"],
-    "outros": ["novidades de consumo", "produtos em alta", "marcas em alta"]
+    "outros": ["tendências de consumo", "novidades do mercado", "comportamento jovem"]
 }
 
 # 1. Base Real: Google Suggest Brasil
@@ -146,7 +156,7 @@ def coletar_buscas_google(termo):
     except Exception:
         pass
     if not resultados:
-        resultados = [f"{termo} feminino", f"{termo} modelos", f"{termo} novidades", f"{termo} comprar"]
+        resultados = [f"{termo} feminino", f"{termo} masculino", f"{termo} hoje", f"{termo} brasil"]
     return resultados
 
 # 2. Base Real: Google Notícias Brasil
@@ -171,38 +181,37 @@ def coletar_noticias_google(termo):
         pass
     return noticias
 
-# 3. Análise da IA
-def gerar_analise_ia(termo, segmento, buscas, noticias):
-    texto_noticias = "\n".join([f"- {n['titulo']} (veículo: {n['fonte']})" for n in noticias]) if noticias else "Sem notícias recentes específicas."
+# 3. Inteligência Artificial: Síntese no estilo Visão Geral do Google
+def gerar_resumo_ia(termo, segmento, buscas, noticias):
+    texto_noticias = "\n".join([f"- {n['titulo']} ({n['fonte']})" for n in noticias]) if noticias else "Sem notícias recentes."
     texto_buscas = ", ".join(buscas)
     
     prompt = f"""
-    Você é um editor de tendências e cultura de consumo no Brasil com olhar apurado de comunicação e mercado.
-    Sua missão é explicar o tema "{termo}" no segmento "{segmento}".
+    Você é a IA do Google gerando um resumo explicativo sobre "{termo}" no contexto de "{segmento}" no Brasil.
     
-    NOTÍCIAS RECENTES NA MÍDIA:
+    NOTÍCIAS RECENTES QUE SAÍRAM NA MÍDIA:
     {texto_noticias}
     
-    BUSCAS REAIS NO GOOGLE:
+    O QUE AS PESSOAS ESTÃO BUSCANDO NO GOOGLE:
     {texto_buscas}
 
     REGRAS OBRIGATÓRIAS:
-    1. PROIBIDO O CARACTERE '&'. Use sempre a conjunção 'e'.
-    2. ZERO papo de consultor corporativo. Seja direto, informativo e interessante.
-    3. Responda ESTRITAMENTE focado no termo "{termo}".
-    4. Em 'sobre': Faça um texto fluido de 2 parágrafos contando a história real do que está acontecendo com esse assunto no Brasil, conectando as notícias e o comportamento do público.
-    5. Em 'o_que_precisa_saber': Traga 3 pontos rápidos com fatos, novidades e o comportamento real das pessoas.
-    6. Em 'resumo_imprensa': Um parágrafo conciso resumindo o foco dos portais de notícia.
+    1. PROIBIDO USAR O CARACTERE '&'. Use sempre a conjunção 'e'.
+    2. Escreva como uma Visão Geral do Google: comece explicando diretamente o que está em pauta sobre "{termo}" agora, conectando os acontecimentos recentes da imprensa e das buscas.
+    3. ZERO jargão corporativo ou papo de consultoria. Seja conciso, humano e informativo.
+    4. No campo 'visao_geral': Um parágrafo fluido de 3 a 5 linhas resumindo o momento atual do tema, o porquê de estar em destaque e o que o público está acompanhando.
+    5. No campo 'pontos_chave': 3 destaques objetivos e analíticos sobre os acontecimentos reais e o comportamento do público.
+    6. No campo 'resumo_imprensa': Um resumo de 2 linhas sobre o foco da cobertura jornalística recente.
 
-    Retorne APENAS JSON:
+    Retorne APENAS um JSON válido:
     {{
-      "sobre": "texto fluido aqui",
-      "o_que_precisa_saber": [
-        "Ponto 1 objetivo e informativo.",
-        "Ponto 2 objetivo e informativo.",
-        "Ponto 3 objetivo e informativo."
+      "visao_geral": "texto explicativo e natural aqui",
+      "pontos_chave": [
+        "Destaque 1 direto sobre a repercussão recente.",
+        "Destaque 2 direto sobre o que as pessoas estão buscando.",
+        "Destaque 3 direto sobre o desdobramento do assunto."
       ],
-      "resumo_imprensa": "resumo do tom da mídia aqui"
+      "resumo_imprensa": "resumo jornalístico aqui"
     }}
     """
     
@@ -211,11 +220,13 @@ def gerar_analise_ia(termo, segmento, buscas, noticias):
         "generationConfig": {"responseMimeType": "application/json", "temperature": 0.25}
     }
     
-    # Tentativa 1: Endpoint via Bearer token (para chaves do GCP tipo AQ.)
-    endpoint = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent"
+    # Requisição direta via API REST
+    url_base = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent"
+    
+    # 1. Tentativa via Bearer Token
     try:
         req = urllib.request.Request(
-            endpoint,
+            url_base,
             data=json.dumps(payload).encode("utf-8"),
             headers={"Content-Type": "application/json", "Authorization": f"Bearer {CHAVE_API}"},
             method="POST"
@@ -223,56 +234,40 @@ def gerar_analise_ia(termo, segmento, buscas, noticias):
         with urllib.request.urlopen(req, timeout=12) as resp:
             res_json = json.loads(resp.read().decode("utf-8"))
             texto_raw = res_json["candidates"][0]["content"]["parts"][0]["text"]
-            return json.loads(texto_raw)
-    except Exception:
-        pass
-
-    # Tentativa 2: Endpoint com ?key=
-    try:
-        endpoint_key = f"{endpoint}?key={CHAVE_API}"
-        req2 = urllib.request.Request(
-            endpoint_key,
-            data=json.dumps(payload).encode("utf-8"),
-            headers={"Content-Type": "application/json"},
-            method="POST"
-        )
-        with urllib.request.urlopen(req2, timeout=12) as resp2:
-            res_json2 = json.loads(resp2.read().decode("utf-8"))
-            texto_raw2 = res_json2["candidates"][0]["content"]["parts"][0]["text"]
-            return json.loads(texto_raw2)
-    except Exception:
-        pass
-
-    # Fallback inteligente contextualizado com os dados reais já coletados
-    m1 = noticias[0]["titulo"] if noticias else f"crescimento no interesse por {termo}"
-    m2 = noticias[1]["titulo"] if len(noticias) > 1 else "novidades no mercado nacional"
-    return {
-        "sobre": f"O interesse em torno de '{termo}' ganhou fôlego renovado nas conversas e no varejo brasileiro, refletindo a busca do público por novidades que combinem praticidade e estilo.\n\nA movimentação recente na imprensa destaca desdobramentos como '{m1}', mostrando que o assunto está em circulação ativa tanto em portais especializados quanto no cotidiano de quem pesquisa no Google.",
-        "o_que_precisa_saber": [
-            f"O assunto ganhou força recente na mídia impulsionado pela cobertura de: {m1}.",
-            f"Outro ângulo em discussão envolve {m2}, movimentando comunidades e fóruns de debate.",
-            f"Nas buscas, os termos mais associados são '{', '.join(buscas[:3])}', indicando interesse direto de compra e referências visuais."
-        ],
-        "resumo_imprensa": f"A imprensa concentra a cobertura em novidades imediatas, estilo e o impacto de {termo} no mercado nacional."
-    }
+            return json.loads(texto_raw), None
+    except Exception as e1:
+        # 2. Tentativa via Query Key
+        try:
+            req2 = urllib.request.Request(
+                f"{url_base}?key={CHAVE_API}",
+                data=json.dumps(payload).encode("utf-8"),
+                headers={"Content-Type": "application/json"},
+                method="POST"
+            )
+            with urllib.request.urlopen(req2, timeout=12) as resp2:
+                res_json2 = json.loads(resp2.read().decode("utf-8"))
+                texto_raw2 = res_json2["candidates"][0]["content"]["parts"][0]["text"]
+                return json.loads(texto_raw2), None
+        except Exception as e2:
+            return None, f"Falha de autenticação ({e2}). Verifique a chave nos Secrets."
 
 if "termo_ativo" not in st.session_state:
-    st.session_state.termo_ativo = "sapatilha"
+    st.session_state.termo_ativo = "vôlei"
 
-# 1. Seletor de Segmento com suporte a "Outros"
+# 1. Seletor de Segmento
 c_nicho, c_outro = st.columns([1, 2])
 with c_nicho:
-    nicho_escolhido = st.selectbox("segmento de interesse", list(SEGMENTOS.keys()), index=0)
+    nicho_escolhido = st.selectbox("segmento de interesse", list(SEGMENTOS.keys()), index=1)
 
 nicho_personalizado = ""
 if nicho_escolhido == "outros":
     with c_outro:
-        nicho_personalizado = st.text_input("especifique o segmento", placeholder="ex: perfumaria, café especial, bem-estar...")
+        nicho_personalizado = st.text_input("especifique o segmento", placeholder="ex: perfumaria, café especial...")
 
 segmento_final = nicho_personalizado if (nicho_escolhido == "outros" and nicho_personalizado) else nicho_escolhido
 itens_do_nicho = SEGMENTOS.get(nicho_escolhido, SEGMENTOS["outros"])
 
-# 2. Painel estilo Aeroporto (Marquee contínuo)
+# 2. Painel estilo Aeroporto (Marquee Contínuo)
 itens_duplicados = itens_do_nicho + itens_do_nicho + itens_do_nicho
 links_html = "".join([
     f'<a class="airport-item" href="https://trends.google.com/trends/explore?geo=BR&q={urllib.parse.quote(t)}" target="_blank">↗ {t.upper()}</a>'
@@ -294,7 +289,7 @@ st.markdown(f"""
 st.markdown('<h1 class="brand-title" style="font-size: 2.3rem; margin-bottom: 4px;">radar de tendências</h1>', unsafe_allow_html=True)
 st.caption("o que você precisa saber sobre o que estão falando agora.")
 
-# Campo de Busca e Atalhos do Nicho
+# Campo de Busca
 st.markdown('<div class="card">', unsafe_allow_html=True)
 c_inp, c_b = st.columns([3, 1])
 with c_inp:
@@ -306,8 +301,8 @@ with c_b:
 
 st.session_state.termo_ativo = termo_input
 
-# Atalhos do nicho selecionado
-st.markdown('<div class="section-label" style="margin-top: 10px;">termos em alta neste segmento (clique para consultar):</div>', unsafe_allow_html=True)
+# Atalhos do nicho
+st.markdown('<div class="section-label" style="margin-top: 10px;">termos em alta neste segmento:</div>', unsafe_allow_html=True)
 cols_ch = st.columns(len(itens_do_nicho))
 for i, item in enumerate(itens_do_nicho):
     if cols_ch[i].button(f"↗ {item}", key=f"nicho_item_{i}"):
@@ -317,31 +312,54 @@ st.markdown('</div>', unsafe_allow_html=True)
 
 # Execução e Apresentação
 if btn_analisar or st.session_state.termo_ativo:
-    with st.spinner("analisando o assunto em tempo real..."):
+    with st.spinner("consultando inteligência contextual em tempo real..."):
         buscas = coletar_buscas_google(st.session_state.termo_ativo)
         noticias = coletar_noticias_google(st.session_state.termo_ativo)
-        dados = gerar_analise_ia(st.session_state.termo_ativo, segmento_final, buscas, noticias)
+        dados, erro_ia = gerar_resumo_ia(st.session_state.termo_ativo, segmento_final, buscas, noticias)
 
-    # Bloco 1: Sobre
+    if erro_ia:
+        st.error(erro_ia)
+
+    # Bloco 1: Visão Geral Explicativa (Estilo Google AI Overview)
     st.markdown('<div class="card">', unsafe_allow_html=True)
-    st.markdown(f'<div class="section-label">sobre "{st.session_state.termo_ativo}"</div>', unsafe_allow_html=True)
-    paragrafos = dados.get("sobre", "").split("\n\n")
-    for p in paragrafos:
-        st.markdown(f'<p style="margin:0 0 10px 0; font-size:0.96rem; line-height:1.65; color:#2b211b;">{p}</p>', unsafe_allow_html=True)
+    st.markdown(f'<div class="section-label">visão geral sobre "{st.session_state.termo_ativo}"</div>', unsafe_allow_html=True)
+    
+    if dados:
+        texto_visao = dados.get("visao_geral", "")
+    else:
+        # Resumo contextual puro a partir das notícias reais caso a IA esteja sem conexão
+        m_txt = f" Destacam-se coberturas como '{noticias[0]['titulo']}'." if noticias else ""
+        texto_visao = f"As discussões recentes em torno de '{st.session_state.termo_ativo}' refletem um momento de atenção pública focado em novidades esportivas, contratações e transmissões de campeonatos.{m_txt}"
+    
+    st.markdown(f"""
+    <div class="overview-box">
+        {texto_visao}
+    </div>
+    """, unsafe_allow_html=True)
     st.markdown('</div>', unsafe_allow_html=True)
 
     # Bloco 2: O Que Você Precisa Saber Sobre o Que Estão Falando
     st.markdown('<div class="card">', unsafe_allow_html=True)
     st.markdown(f'<div class="section-label">o que você precisa saber sobre o que estão falando</div>', unsafe_allow_html=True)
-    for ponto in dados.get("o_que_precisa_saber", []):
+    
+    if dados:
+        pontos = dados.get("pontos_chave", [])
+    else:
+        pontos = [
+            f"Manchete em destaque na imprensa: {noticias[0]['titulo']}." if noticias else f"Interesse constante por {st.session_state.termo_ativo}.",
+            f"Nas buscas, quem pesquisa no Google procura por termos como: {', '.join(buscas[:3])}.",
+            f"Desdobramentos recentes acompanhados pelos principais portais esportivos nacionais."
+        ]
+        
+    for p in pontos:
         st.markdown(f"""
         <div style="background:#fdfbf9; border-left:3px solid #8c5835; padding:12px 16px; border-radius:4px; margin-bottom:10px;">
-            <p style="margin:0; font-size:0.92rem; line-height:1.55; color:#3d2b21;">{ponto}</p>
+            <p style="margin:0; font-size:0.92rem; line-height:1.55; color:#3d2b21;">{p}</p>
         </div>
         """, unsafe_allow_html=True)
     st.markdown('</div>', unsafe_allow_html=True)
 
-    # Bloco 3: Gráfico Oficial do Google Trends
+    # Bloco 3: Gráfico do Google Trends
     st.markdown('<div class="card">', unsafe_allow_html=True)
     st.markdown(f'<div class="section-label">interesse ao longo do tempo (google trends brasil)</div>', unsafe_allow_html=True)
     termo_url = urllib.parse.quote(st.session_state.termo_ativo)
@@ -363,9 +381,10 @@ if btn_analisar or st.session_state.termo_ativo:
     # Bloco 4: Na Imprensa
     st.markdown('<div class="card">', unsafe_allow_html=True)
     st.markdown(f'<div class="section-label">o que a imprensa está falando</div>', unsafe_allow_html=True)
+    resumo_imp = dados.get("resumo_imprensa", "") if dados else "Cobertura focada em transmissões, novidades e decisões de bastidores apuradas pelos principais veículos."
     st.markdown(f"""
     <p style="margin:0 0 14px 0; font-size:0.9rem; line-height:1.6; color:#5c4738;">
-        {dados.get('resumo_imprensa', '')}
+        {resumo_imp}
     </p>
     """, unsafe_allow_html=True)
     
