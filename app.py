@@ -3,15 +3,15 @@ import json
 import urllib.parse
 import urllib.request
 import xml.etree.ElementTree as ET
-import google.generativeai as genai
+from google import genai
+from google.genai import types
 
 st.set_page_config(page_title="radar | o que você precisa saber", layout="wide", initial_sidebar_state="collapsed")
 
-# Configuração oficial da inteligência
-API_KEY = "AQ.Ab8RN6IfRuC1ubQJSIbZZsUF3cKASRsBl94HHb1qdh-4eao7hw"
-genai.configure(api_key=API_KEY)
+# Chave oficial do console
+CHAVE_API = st.secrets.get("GEMINI_API_KEY", "AQ.Ab8RN6K0s7oAWASVyRJlyQSTV1aFotsEN-mJEmcDO2Xxo_OULg")
 
-# Estilo Editorial Limpo em Tons de Café, Areia e Marrom
+# Estilo Editorial em Tons de Café, Areia e Marrom
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
@@ -149,27 +149,27 @@ with st.container():
             st.rerun()
     st.markdown('</div>', unsafe_allow_html=True)
 
-# 3. Análise Direta Usando a SDK Oficial do Gemini
+# 3. Análise Direta com a SDK Nova google-genai
 def gerar_briefing_personalizado(termo, buscas, noticias):
     texto_noticias = "\n".join([f"- {n['titulo']} ({n['fonte']})" for n in noticias]) if noticias else "Sem notícias recentes."
     texto_buscas = ", ".join(buscas)
     
     prompt = f"""
-    Você é um editor de tendências, comportamento e cultura de consumo no Brasil.
-    Faça uma leitura personalizada, inteligente e fluida sobre o tema "{termo}".
-    
+    Você é um editor de tendências, comportamento e consumo no Brasil.
+    Faça uma leitura analítica, fluida e específica sobre o tema "{termo}".
+
     BUSCAS REAIS NO GOOGLE HOJE: {texto_buscas}
     NOTÍCIAS DA IMPRENSA: {texto_noticias}
 
     DIRETRIZES:
     1. PROIBIDO USAR O CARACTERE '&'. Use sempre a conjunção 'e'.
-    2. Responda ESTRITAMENTE focado no termo "{termo}". Se for futebol, fale sobre futebol, transferências, transmissões e consumo esportivo. Se for maiô, fale sobre vestuário de natação. NUNCA misture os assuntos.
-    3. ZERO jargão corporativo ou papo de consultoria. Escreva de forma fluida, como uma boa newsletter que explica o assunto para quem quer entender o que está acontecendo.
+    2. Responda ESTRITAMENTE focado no termo "{termo}". Nunca misture com outros assuntos.
+    3. ZERO papo corporativo de consultor. Escreva de forma fluida e direta, como um bom briefing editorial.
     4. Em 'o_que_e', explique em 2 parágrafos curtos o que é o tema e qual o momento dele no Brasil hoje.
     5. Em 'o_que_precisa_saber', traga 3 pontos analíticos reais e específicos sobre as buscas, os hábitos do público e os bastidores desse assunto.
-    6. Em 'resumo_noticias', faça um resumo claro de 2 frases conectando o tom das matérias da imprensa listadas.
+    6. Em 'resumo_noticias', faça um resumo claro de 2 frases conectando o tom das matérias listadas.
 
-    Retorne APENAS um JSON válido neste formato exato:
+    Retorne APENAS um JSON válido neste formato:
     {{
       "o_que_e": "texto aqui",
       "o_que_precisa_saber": [
@@ -182,26 +182,26 @@ def gerar_briefing_personalizado(termo, buscas, noticias):
     """
     
     try:
-        model = genai.GenerativeModel("gemini-1.5-flash")
-        response = model.generate_content(
-            prompt,
-            generation_config=genai.GenerationConfig(
+        client = genai.Client(api_key=CHAVE_API)
+        response = client.models.generate_content(
+            model="gemini-2.5-flash",
+            contents=prompt,
+            config=types.GenerateContentConfig(
                 response_mime_type="application/json",
                 temperature=0.25
             )
         )
         return json.loads(response.text)
     except Exception as e:
-        # Mostra o erro real na tela caso ocorra algum problema de configuração
-        st.error(f"Detalhe da conexão: {e}")
+        st.error(f"Erro na geração da IA: {e}")
         return {
             "o_que_e": f"Informações contextuais sobre {termo}.",
             "o_que_precisa_saber": [
-                f"Buscas recorrentes associadas a {termo} no Brasil.",
-                "Interesse constante da comunidade digital e de consumo.",
-                "Movimentações recentes acompanhadas pela imprensa esportiva e de estilo de vida."
+                f"Buscas recorrentes associadas a {termo} registradas no Google.",
+                "Interesse constante da comunidade e do público.",
+                "Acompanhamento da cobertura recente na imprensa."
             ],
-            "resumo_noticias": "A cobertura recente destaca os principais fatos e novidades da semana."
+            "resumo_noticias": "A cobertura recente destaca as principais novidades da semana."
         }
 
 # Apresentação dos Resultados
