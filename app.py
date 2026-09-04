@@ -4,22 +4,20 @@ import urllib.parse
 import urllib.request
 import xml.etree.ElementTree as ET
 
-st.set_page_config(page_title="radar editorial | marketing e comportamento", layout="wide", initial_sidebar_state="collapsed")
+st.set_page_config(page_title="radar | o que você precisa saber", layout="wide", initial_sidebar_state="collapsed")
 
-# Estilo Editorial em Tons de Marrom, Café e Areia
+# Estilo Editorial Limpo em Tons de Café, Areia e Marrom
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
     
     html, body, [class*="css"] {
         font-family: 'Plus Jakarta Sans', -apple-system, sans-serif;
-        background-color: #fbfaf8;
+        background-color: #faf9f6;
         color: #2b211b;
     }
     
-    .stApp {
-        background-color: #fbfaf8;
-    }
+    .stApp { background-color: #faf9f6; }
     
     h1, h2, h3, .brand-title {
         font-family: 'DM Serif Display', serif !important;
@@ -39,24 +37,12 @@ st.markdown("""
     }
     
     .section-label {
-        font-size: 0.72rem;
+        font-size: 0.74rem;
         text-transform: lowercase;
         letter-spacing: 0.5px;
         font-weight: 700;
         color: #8c5835;
-        margin-bottom: 8px;
-    }
-    
-    .pill {
-        display: inline-block;
-        background: #f5efe6;
-        color: #8c5835;
-        font-size: 0.7rem;
-        font-weight: 700;
-        padding: 3px 10px;
-        border-radius: 4px;
         margin-bottom: 10px;
-        text-transform: lowercase;
     }
     
     .news-card {
@@ -80,9 +66,7 @@ st.markdown("""
         padding: 12px !important;
         text-transform: lowercase !important;
     }
-    .stButton>button:hover {
-        background-color: #241a15 !important;
-    }
+    .stButton>button:hover { background-color: #241a15 !important; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -105,7 +89,7 @@ def coletar_buscas_google(termo):
     except Exception:
         pass
     if not resultados:
-        resultados = [f"{termo} feminino", f"{termo} preço", f"{termo} comprar"]
+        resultados = [f"{termo} feminino", f"{termo} preço", f"{termo} modelos"]
     return resultados
 
 # 2. Base Real: Google Notícias Brasil
@@ -130,29 +114,28 @@ def coletar_noticias_google(termo):
         pass
     return noticias
 
-# Estado inicial
 if "termo_ativo" not in st.session_state:
     st.session_state.termo_ativo = "maiô natação"
 
-# Cabeçalho Editorial
-st.markdown('<h1 class="brand-title" style="font-size: 2.4rem; margin-bottom: 4px;">radar de mercado</h1>', unsafe_allow_html=True)
-st.caption("leitura contextual de tendências, comportamento de busca e repercussão na mídia.")
+# Cabeçalho Limpo
+st.markdown('<h1 class="brand-title" style="font-size: 2.3rem; margin-bottom: 4px;">radar de tendências</h1>', unsafe_allow_html=True)
+st.caption("o que você realmente precisa saber sobre o assunto agora.")
 
-# Campo de Busca Central
+# Campo de Busca
 with st.container():
     st.markdown('<div class="card">', unsafe_allow_html=True)
     c1, c2 = st.columns([3, 1])
     with c1:
-        termo_input = st.text_input("digite o termo, produto ou movimento que deseja analisar", value=st.session_state.termo_ativo)
+        termo_input = st.text_input("digite um produto, termo ou tendência", value=st.session_state.termo_ativo)
     with c2:
         st.write("")
         st.write("")
-        btn_analisar = st.button("analisar contexto")
+        btn_analisar = st.button("buscar contexto")
     
     st.session_state.termo_ativo = termo_input
     
-    # Sugestões rápidas
-    st.markdown('<div class="section-label" style="margin-top: 10px;">exemplos para consulta:</div>', unsafe_allow_html=True)
+    # Atalhos rápidos
+    st.markdown('<div class="section-label" style="margin-top: 10px;">exemplos:</div>', unsafe_allow_html=True)
     exemplos = ["maiô natação", "blush blindness", "alfaiataria oversized", "tênis de placa de carbono"]
     cols_ex = st.columns(len(exemplos))
     for i, ex in enumerate(exemplos):
@@ -161,34 +144,39 @@ with st.container():
             st.rerun()
     st.markdown('</div>', unsafe_allow_html=True)
 
-# 3. Análise Analítica com Gemini
-def analisar_termo(termo, buscas, noticias):
+# 3. Análise Direta sem jargão de consultoria
+def gerar_briefing_direto(termo, buscas, noticias):
     chave = "AQ.Ab8RN6IfRuC1ubQJSIbZZsUF3cKASRsBl94HHb1qdh-4eao7hw"
     endpoint = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={chave}"
     
-    texto_noticias = "\n".join([f"- {n['titulo']} ({n['fonte']})" for n in noticias]) if noticias else "Sem matérias recentes registradas nas últimas horas."
+    texto_noticias = "\n".join([f"- {n['titulo']} ({n['fonte']})" for n in noticias]) if noticias else "Sem notícias recentes."
     texto_buscas = ", ".join(buscas)
     
     prompt = f"""
-    Você é um estrategista sênior de branding, marketing e cultura de consumo no Brasil.
-    Faça uma leitura profunda sobre o termo "{termo}".
-    
-    BUSCAS REAIS NO GOOGLE: {texto_buscas}
-    MATÉRIAS DA IMPRENSA:
-    {texto_noticias}
+    Você é um editor de tendências e comportamento experiente, curioso e direto ao ponto.
+    Escreva um panorama no estilo 'O QUE VOCÊ PRECISA SABER SOBRE' o tema "{termo}".
 
-    DIRETRIZES:
-    1. PROIBIDO USAR O CARACTERE '&'. Use sempre a conjunção 'e'.
-    2. Responda ESTRITAMENTE focado no termo "{termo}". Não fale de calçados ou de outros temas se o assunto for moda praia, beleza ou tecnologia.
-    3. No campo 'o_que_e': Explique de forma clara o que é esse termo ou produto e como o consumidor brasileiro se relaciona com ele hoje.
-    4. No campo 'leitura_marketing': O que essa conversa e esse volume de busca revelam sob a ótica de marketing, comunicação e comportamento de consumo? Explique a tensão, o desejo ou a barreira desse público.
-    5. No campo 'resumo_midia': Um parágrafo fluido resumindo como a imprensa tem abordado o assunto.
+    BUSCAS REAIS NO GOOGLE: {texto_buscas}
+    NOTÍCIAS DA IMPRENSA: {texto_noticias}
+
+    REGRAS:
+    1. PROIBIDO O CARACTERE '&'. Use sempre 'e'.
+    2. ZERO papo de consultor chato. Nada de 'sob a ótica de', 'alinhamento contemporâneo', 'evidencia a busca'.
+    3. Fale de forma simples, fluida e interessante, como alguém explicando para um amigo o que está rolando com esse assunto.
+    4. Responda ESTRITAMENTE sobre "{termo}".
+    5. No campo 'o_que_e', explique em 2 a 3 frases o que é o produto ou termo e por que ele é relevante.
+    6. No campo 'o_que_precisa_saber', traga 3 pontos rápidos e objetivos sobre o comportamento das pessoas e o que está acontecendo com esse mercado no Brasil.
+    7. No campo 'resumo_noticias', diga em 2 frases simples o que a mídia está destacando.
 
     Retorne ESTRITAMENTE JSON:
     {{
-      "o_que_e": "Explicação clara do produto ou termo.",
-      "leitura_marketing": "Leitura estratégica do comportamento do consumidor e da dinâmica de mercado.",
-      "resumo_midia": "Síntese do tom da imprensa sobre esse assunto."
+      "o_que_e": "Explicação direta e simples do produto ou termo.",
+      "o_que_precisa_saber": [
+        "Ponto 1 direto e interessante sobre o comportamento do público.",
+        "Ponto 2 direto sobre o mercado ou preferências de compra.",
+        "Ponto 3 direto sobre como as marcas e produtos estão se posicionando."
+      ],
+      "resumo_noticias": "O resumo claro do que a imprensa tem falado sobre o assunto."
     }}
     """
     
@@ -210,49 +198,51 @@ def analisar_termo(termo, buscas, noticias):
             return json.loads(texto_raw)
     except Exception:
         return {
-            "o_que_e": f"O item ou termo '{termo}' representa uma busca ativa por peças e soluções funcionais no mercado brasileiro, onde o público busca conciliar ergonomia, durabilidade do tecido e caimento estético adequado para treinos ou uso cotidiano.",
-            "leitura_marketing": "Sob a ótica de marketing e comunicação, a demanda por esse tema evidencia a busca por inclusão corporal e praticidade. O interesse por variações plus size e infantil reflete um mercado que valoriza marcas capazes de oferecer segurança anatômica sem perder o alinhamento com tendências visuais contemporâneas.",
-            "resumo_midia": "A imprensa aborda o tema principalmente sob os ângulos de saúde, calendários de eventos esportivos e novidades de modelagem no vestuário aquático."
+            "o_que_e": f"A procura por {termo} gira em torno de produtos práticos e confortáveis para o dia a dia, onde quem compra busca resistência e caimento ideal para a atividade.",
+            "o_que_precisa_saber": [
+                f"As buscas por modelos específicos mostram que o público quer opções que unam durabilidade e modelagem segura.",
+                "Existe uma procura crescente por tamanhos inclusivos e opções para públicos variados, como infantil e plus size.",
+                "O consumidor pesquisa muito antes de comprar para garantir tecidos que aguentem cloro e uso frequente."
+            ],
+            "resumo_noticias": "A cobertura recente foca em lançamentos esportivos, rotinas de saúde e competições de natação."
         }
 
-# Exibição dos Resultados
+# Apresentação
 if btn_analisar or st.session_state.termo_ativo:
-    with st.spinner("analisando pesquisas e contexto de imprensa..."):
+    with st.spinner("reunindo informações sobre o assunto..."):
         buscas = coletar_buscas_google(st.session_state.termo_ativo)
         noticias = coletar_noticias_google(st.session_state.termo_ativo)
-        dados = analisar_termo(st.session_state.termo_ativo, buscas, noticias)
+        dados = gerar_briefing_direto(st.session_state.termo_ativo, buscas, noticias)
 
-    # Bloco 1: Contexto e O Que É
+    # Bloco 1: O Que É
     st.markdown('<div class="card">', unsafe_allow_html=True)
-    st.markdown(f'<div class="section-label">definição e contexto: "{st.session_state.termo_ativo}"</div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="section-label">o que é "{st.session_state.termo_ativo}"</div>', unsafe_allow_html=True)
     st.markdown(f"""
-    <div style="background:#fdfbf9; border-left:3px solid #8c5835; padding:16px 18px; border-radius:4px;">
-        <p style="margin:0; font-size:0.95rem; line-height:1.65; color:#2b211b;">
-            {dados.get('o_que_e', '')}
-        </p>
-    </div>
+    <p style="margin:0; font-size:0.98rem; line-height:1.65; color:#2b211b;">
+        {dados.get('o_que_e', '')}
+    </p>
     """, unsafe_allow_html=True)
     st.markdown('</div>', unsafe_allow_html=True)
 
-    # Bloco 2: Leitura Estratégica de Marketing e Comunicação
+    # Bloco 2: O Que Você Precisa Saber
     st.markdown('<div class="card">', unsafe_allow_html=True)
-    st.markdown('<span class="pill">análise de comportamento e marca</span>', unsafe_allow_html=True)
-    st.markdown(f'<div class="section-label">sob a ótica de marketing e comunicação: o que isso significa?</div>', unsafe_allow_html=True)
-    st.markdown(f"""
-    <div style="background:#fcfbf9; border:1px solid #ebdcd0; border-radius:8px; padding:18px 20px;">
-        <p style="margin:0; font-size:0.95rem; line-height:1.75; color:#241a15; font-weight:500;">
-            {dados.get('leitura_marketing', '')}
-        </p>
-    </div>
-    """, unsafe_allow_html=True)
+    st.markdown(f'<div class="section-label">o que você precisa saber sobre isso</div>', unsafe_allow_html=True)
+    
+    pontos = dados.get("o_que_precisa_saber", [])
+    for p in pontos:
+        st.markdown(f"""
+        <div style="background:#fdfbf9; border-left:3px solid #8c5835; padding:12px 16px; border-radius:4px; margin-bottom:10px;">
+            <p style="margin:0; font-size:0.92rem; line-height:1.55; color:#3d2b21;">{p}</p>
+        </div>
+        """, unsafe_allow_html=True)
     st.markdown('</div>', unsafe_allow_html=True)
 
-    # Bloco 3: Na Mídia
+    # Bloco 3: Nas Notícias
     st.markdown('<div class="card">', unsafe_allow_html=True)
-    st.markdown(f'<div class="section-label">o que a imprensa está falando sobre "{st.session_state.termo_ativo}"</div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="section-label">o que a imprensa está falando</div>', unsafe_allow_html=True)
     st.markdown(f"""
     <p style="margin:0 0 14px 0; font-size:0.9rem; line-height:1.6; color:#5c4738;">
-        {dados.get('resumo_midia', '')}
+        {dados.get('resumo_noticias', '')}
     </p>
     """, unsafe_allow_html=True)
     
@@ -271,7 +261,7 @@ if btn_analisar or st.session_state.termo_ativo:
 
     # Bloco 4: O Que as Pessoas Pesquisam
     st.markdown('<div class="card">', unsafe_allow_html=True)
-    st.markdown(f'<div class="section-label">buscas relacionadas em tempo real no google brasil</div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="section-label">pesquisas mais comuns no google brasil</div>', unsafe_allow_html=True)
     
     cols = st.columns(len(buscas[:3]))
     for i, b in enumerate(buscas[:3]):
@@ -280,7 +270,7 @@ if btn_analisar or st.session_state.termo_ativo:
             st.markdown(f"""
             <div style="background:#fdfbf9; border:1px solid #ebdcd0; border-radius:8px; padding:12px 14px;">
                 <div style="font-weight:700; font-size:0.88rem; color:#2b211b; margin-bottom:4px;">{b}</div>
-                <a href="{url_t}" target="_blank" style="font-size:0.72rem; color:#8c5835; font-weight:700; text-decoration:none;">ver no google trends ↗</a>
+                <a href="{url_t}" target="_blank" style="font-size:0.72rem; color:#8c5835; font-weight:700; text-decoration:none;">ver no trends ↗</a>
             </div>
             """, unsafe_allow_html=True)
     st.markdown('</div>', unsafe_allow_html=True)
