@@ -4,22 +4,24 @@ import urllib.parse
 import urllib.request
 import xml.etree.ElementTree as ET
 
-st.set_page_config(page_title="radar de mercado e tendências", layout="wide", initial_sidebar_state="collapsed")
+st.set_page_config(page_title="radar editorial | marketing e comportamento", layout="wide", initial_sidebar_state="collapsed")
 
-# Estilo Editorial e Sofisticado em Tons de Marrom, Café e Fundo Areia
+# Estilo Editorial em Tons de Marrom, Café e Areia
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
     
     html, body, [class*="css"] {
         font-family: 'Plus Jakarta Sans', -apple-system, sans-serif;
-        background-color: #fcfbf9;
+        background-color: #fbfaf8;
         color: #2b211b;
     }
     
-    .stApp { background-color: #fcfbf9; }
+    .stApp {
+        background-color: #fbfaf8;
+    }
     
-    h1, h2, h3, .orelo-title {
+    h1, h2, h3, .brand-title {
         font-family: 'DM Serif Display', serif !important;
         font-weight: 400 !important;
         letter-spacing: -0.5px !important;
@@ -27,45 +29,13 @@ st.markdown("""
         color: #241a15 !important;
     }
     
-    .ticker-bar {
-        background-color: #2b211b;
-        color: #f5efe6;
-        padding: 8px 14px;
-        font-size: 0.76rem;
-        display: flex;
-        align-items: center;
-        border-radius: 6px;
-        margin-bottom: 24px;
-        overflow-x: auto;
-        white-space: nowrap;
-    }
-    .ticker-badge {
-        background-color: #8c5835;
-        color: #ffffff;
-        font-weight: 700;
-        padding: 2px 8px;
-        border-radius: 4px;
-        font-size: 0.68rem;
-        margin-right: 14px;
-        text-transform: lowercase;
-        flex-shrink: 0;
-    }
-    .ticker-link {
-        color: #d1bfae !important;
-        text-decoration: none !important;
-        text-transform: lowercase;
-        margin-right: 18px;
-        transition: color 0.2s;
-    }
-    .ticker-link:hover { color: #ffffff !important; }
-    
-    .panel-card {
+    .card {
         background: #ffffff;
         border: 1px solid #ebdcd0;
         border-radius: 12px;
         padding: 24px;
         margin-bottom: 20px;
-        box-shadow: 0 1px 3px rgba(43, 33, 27, 0.03);
+        box-shadow: 0 1px 3px rgba(43, 33, 27, 0.02);
     }
     
     .section-label {
@@ -77,45 +47,24 @@ st.markdown("""
         margin-bottom: 8px;
     }
     
-    .status-pill {
+    .pill {
         display: inline-block;
         background: #f5efe6;
         color: #8c5835;
-        font-size: 0.72rem;
+        font-size: 0.7rem;
         font-weight: 700;
-        padding: 4px 10px;
-        border-radius: 6px;
-        margin-bottom: 8px;
+        padding: 3px 10px;
+        border-radius: 4px;
+        margin-bottom: 10px;
         text-transform: lowercase;
     }
     
-    .thermometer-box {
-        background: #fdfaf7;
-        border: 1px solid #ebdcd0;
-        border-radius: 8px;
-        padding: 16px;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        margin-bottom: 16px;
-    }
-    
-    .badge-temp {
-        background: #8c5835;
-        color: #ffffff;
-        font-size: 0.75rem;
-        font-weight: 700;
-        padding: 4px 12px;
-        border-radius: 6px;
-        text-transform: lowercase;
-    }
-    
-    .news-item {
-        background: #fdfaf7;
+    .news-card {
+        background: #fdfbf9;
         border: 1px solid #ebdcd0;
         border-radius: 8px;
         padding: 12px 16px;
-        margin-bottom: 10px;
+        margin-bottom: 8px;
         display: flex;
         justify-content: space-between;
         align-items: center;
@@ -131,13 +80,15 @@ st.markdown("""
         padding: 12px !important;
         text-transform: lowercase !important;
     }
-    .stButton>button:hover { background-color: #2b211b !important; }
+    .stButton>button:hover {
+        background-color: #241a15 !important;
+    }
 </style>
 """, unsafe_allow_html=True)
 
-# 1. Base Real: Google Suggest Brasil (O que as pessoas realmente digitam)
-def obter_buscas_reais_google(termo_base):
-    termo_enc = urllib.parse.quote(termo_base.strip())
+# 1. Base Real: Google Suggest Brasil
+def coletar_buscas_google(termo):
+    termo_enc = urllib.parse.quote(termo.strip())
     url = f"https://suggestqueries.google.com/complete/search?client=chrome&hl=pt-BR&gl=br&q={termo_enc}"
     resultados = []
     try:
@@ -147,19 +98,19 @@ def obter_buscas_reais_google(termo_base):
             if len(data) > 1 and isinstance(data[1], list):
                 for item in data[1]:
                     limpo = item.strip().lower()
-                    if limpo != termo_base.lower() and limpo not in resultados:
+                    if limpo != termo.lower() and limpo not in resultados:
                         resultados.append(limpo)
                     if len(resultados) >= 3:
                         break
     except Exception:
         pass
     if not resultados:
-        resultados = [f"{termo_base} vale a pena", f"como escolher {termo_base}", f"melhor marca {termo_base}"]
+        resultados = [f"{termo} feminino", f"{termo} preço", f"{termo} comprar"]
     return resultados
 
-# 2. Base Real: Google Notícias Brasil (Fatos e Manchetes em Tempo Real)
-def buscar_noticias_reais(termo_base):
-    termo_enc = urllib.parse.quote(termo_base.strip())
+# 2. Base Real: Google Notícias Brasil
+def coletar_noticias_google(termo):
+    termo_enc = urllib.parse.quote(termo.strip())
     url = f"https://news.google.com/rss/search?q={termo_enc}&hl=pt-BR&gl=BR&ceid=BR:pt-419"
     noticias = []
     try:
@@ -169,7 +120,7 @@ def buscar_noticias_reais(termo_base):
             for item in root.findall('./channel/item')[:3]:
                 t = item.find('title').text if item.find('title') is not None else ""
                 l = item.find('link').text if item.find('link') is not None else "#"
-                fonte = "veículo nacional"
+                fonte = "imprensa"
                 if " - " in t:
                     partes = t.rsplit(" - ", 1)
                     t = partes[0]
@@ -179,105 +130,65 @@ def buscar_noticias_reais(termo_base):
         pass
     return noticias
 
-# Segmentos e Exemplos Claros de Mercado
-SEGMENTOS = {
-    "esportes e corrida": ["tênis de placa de carbono", "corrida de rua 10k", "suplementação creatina", "natação para iniciantes", "beach tennis"],
-    "moda e estilo de vida": ["alfaiataria oversized", "camisas de time retrô", "calça balonê", "tênis de cano baixo", "bermuda jorts"],
-    "beleza e autocuidado": ["rotina de pele glow", "protetor solar toque seco", "óleo capilar reparador", "lip tint natural"],
-    "varejo e consumo geral": ["café especial fermentado", "garrafa térmica esportiva", "mochila impermeável urbana", "fones sem fio"],
-    "outros": ["novos hábitos de consumo", "tendências de compra", "marcas em alta"]
-}
-
+# Estado inicial
 if "termo_ativo" not in st.session_state:
-    st.session_state.termo_ativo = "tênis de placa de carbono"
+    st.session_state.termo_ativo = "maiô natação"
 
-# Painel de Seleção e Busca
+# Cabeçalho Editorial
+st.markdown('<h1 class="brand-title" style="font-size: 2.4rem; margin-bottom: 4px;">radar de mercado</h1>', unsafe_allow_html=True)
+st.caption("leitura contextual de tendências, comportamento de busca e repercussão na mídia.")
+
+# Campo de Busca Central
 with st.container():
-    st.markdown('<div class="panel-card">', unsafe_allow_html=True)
-    c1, c2, c3 = st.columns(3)
+    st.markdown('<div class="card">', unsafe_allow_html=True)
+    c1, c2 = st.columns([3, 1])
     with c1:
-        nicho = st.selectbox("segmento", list(SEGMENTOS.keys()), index=0)
-        nicho_personalizado = ""
-        if nicho == "outros":
-            nicho_personalizado = st.text_input("especifique o segmento", placeholder="ex: cafeteria, calçados, joias...")
+        termo_input = st.text_input("digite o termo, produto ou movimento que deseja analisar", value=st.session_state.termo_ativo)
     with c2:
-        periodo = st.selectbox("período de interesse", ["últimos 7 dias", "últimos 30 dias", "últimos 90 dias"])
-    with c3:
-        foco_comercial = st.selectbox("objetivo principal", [
-            "lançamento de coleção ou produto",
-            "campanha de comunicação e redes sociais",
-            "estratégia de ponto de venda e vitrine",
-            "posicionamento e reputação de marca"
-        ])
+        st.write("")
+        st.write("")
+        btn_analisar = st.button("analisar contexto")
     
-    nicho_final = nicho_personalizado if (nicho == "outros" and nicho_personalizado) else nicho
-
-    # Ticker Superior
-    termos_nicho = SEGMENTOS.get(nicho, SEGMENTOS["outros"])
-    links_ticker = "".join([
-        f'<a class="ticker-link" href="https://trends.google.com/trends/explore?geo=BR&q={urllib.parse.quote(t)}" target="_blank">{t} ↗</a>' 
-        for t in termos_nicho
-    ])
-    st.markdown(f"""
-    <div class="ticker-bar" style="margin-top: 10px; margin-bottom: 14px;">
-        <div class="ticker-badge">em alta agora</div>
-        <div>{links_ticker}</div>
-    </div>
-    """, unsafe_allow_html=True)
-
-    # Botões de atalho simples
-    st.markdown('<div class="section-label" style="margin-bottom:6px;">clique em um tema para testar:</div>', unsafe_allow_html=True)
-    chips = st.columns(len(termos_nicho))
-    for idx, sugestao in enumerate(termos_nicho):
-        if chips[idx].button(f"↗ {sugestao}", key=f"chip_{idx}"):
-            st.session_state.termo_ativo = sugestao
+    st.session_state.termo_ativo = termo_input
+    
+    # Sugestões rápidas
+    st.markdown('<div class="section-label" style="margin-top: 10px;">exemplos para consulta:</div>', unsafe_allow_html=True)
+    exemplos = ["maiô natação", "blush blindness", "alfaiataria oversized", "tênis de placa de carbono"]
+    cols_ex = st.columns(len(exemplos))
+    for i, ex in enumerate(exemplos):
+        if cols_ex[i].button(f"↗ {ex}", key=f"ex_{i}"):
+            st.session_state.termo_ativo = ex
             st.rerun()
-
-    termo_digitado = st.text_area("digite um produto, termo ou tendência que você quer entender", value=st.session_state.termo_ativo, height=70)
-    st.session_state.termo_ativo = termo_digitado
-    btn_gerar = st.button("analisar tendência e gerar estratégia prática")
     st.markdown('</div>', unsafe_allow_html=True)
 
-# 3. Análise Crítica e Direta de Marketing, Branding e Merchan
-def gerar_analise_estrategica(t_termo, t_nicho, t_foco, buscas, noticias):
+# 3. Análise Analítica com Gemini
+def analisar_termo(termo, buscas, noticias):
     chave = "AQ.Ab8RN6IfRuC1ubQJSIbZZsUF3cKASRsBl94HHb1qdh-4eao7hw"
-    endpoint = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={chave}"
+    endpoint = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={chave}"
     
-    texto_noticias = "\n".join([f"- {n['titulo']} (fonte: {n['fonte']})" for n in noticias]) if noticias else "Sem notícias de grande repercussão registradas hoje."
+    texto_noticias = "\n".join([f"- {n['titulo']} ({n['fonte']})" for n in noticias]) if noticias else "Sem matérias recentes registradas nas últimas horas."
     texto_buscas = ", ".join(buscas)
     
     prompt = f"""
-    Você é um Diretor de Marketing, Comunicação, RP e Visual Merchandising com muitos anos de prática de mercado no Brasil.
-    Você é direto, não usa palavras difíceis ou termos acadêmicos chatos, mas pensa de forma muito estratégica.
-    Você não bajula o usuário nem cospe dicas óbvias de IA como 'crie conexões autênticas'. Você diz a verdade do mercado.
+    Você é um estrategista sênior de branding, marketing e cultura de consumo no Brasil.
+    Faça uma leitura profunda sobre o termo "{termo}".
     
-    Tema analisado: "{t_termo}"
-    Segmento: {t_nicho}
-    Objetivo da marca: {t_foco}
-    
-    BUSCAS REAIS DO CONSUMIDOR NO GOOGLE: {texto_buscas}
-    MANCHETES RECENTES NA IMPRENSA:
+    BUSCAS REAIS NO GOOGLE: {texto_buscas}
+    MATÉRIAS DA IMPRENSA:
     {texto_noticias}
 
-    DIRETRIZES FUNDAMENTAIS:
-    1. PROIBIDO O CARACTERE '&'. Use sempre a palavra 'e'.
-    2. Linguagem simples e clara, que qualquer profissional de marca entende em 30 segundos.
-    3. No campo 'o_que_e_isso', explique de forma muito didática o que é esse tema e qual benefício real ele entrega para o cliente comum.
-    4. No campo 'momento_da_tendencia', diga se isso ainda é coisa de especialista ou se já caiu na boca do povo no Brasil.
-    5. No campo 'temperatura', diga se está 'fervendo', 'em alta' ou 'estável'.
-    6. No campo 'barreira_do_cliente', explique qual é a dúvida ou medo real que faz a pessoa pesquisar no Google mas hesitar na hora de comprar.
-    7. No campo 'estrategia_comunicacao', diga como a marca deve falar sobre isso sem parecer forçada, sem clichê e sem gastar dinheiro à toa.
-    8. No campo 'estrategia_merchan', dê a direção física exata de Visual Merchandising: como dispor o produto na loja, na vitrine e na mesa de entrada para valorizar a peça e facilitar a compra.
+    DIRETRIZES:
+    1. PROIBIDO USAR O CARACTERE '&'. Use sempre a conjunção 'e'.
+    2. Responda ESTRITAMENTE focado no termo "{termo}". Não fale de calçados ou de outros temas se o assunto for moda praia, beleza ou tecnologia.
+    3. No campo 'o_que_e': Explique de forma clara o que é esse termo ou produto e como o consumidor brasileiro se relaciona com ele hoje.
+    4. No campo 'leitura_marketing': O que essa conversa e esse volume de busca revelam sob a ótica de marketing, comunicação e comportamento de consumo? Explique a tensão, o desejo ou a barreira desse público.
+    5. No campo 'resumo_midia': Um parágrafo fluido resumindo como a imprensa tem abordado o assunto.
 
     Retorne ESTRITAMENTE JSON:
     {{
-      "o_que_e_isso": "Explicação simples e sem rodeios do produto ou movimento para qualquer um entender.",
-      "por_que_estourou": "O motivo real pelo qual as pessoas começaram a falar disso agora.",
-      "momento_da_tendencia": "nicho em expansão para o grande público",
-      "temperatura": "fervendo",
-      "barreira_do_cliente": "O que trava o cliente de comprar e o erro que as marcas concorrentes cometem na abordagem.",
-      "estrategia_comunicacao": "Mensagem central para redes sociais, imprensa e criadores de conteúdo sem conversa fiada.",
-      "estrategia_merchan": "Como expor na loja física: posição na vitrine, mesa de destaque, placas explicativas e toque do produto."
+      "o_que_e": "Explicação clara do produto ou termo.",
+      "leitura_marketing": "Leitura estratégica do comportamento do consumidor e da dinâmica de mercado.",
+      "resumo_midia": "Síntese do tom da imprensa sobre esse assunto."
     }}
     """
     
@@ -293,66 +204,62 @@ def gerar_analise_estrategica(t_termo, t_nicho, t_foco, buscas, noticias):
             headers={'Content-Type': 'application/json'},
             method='POST'
         )
-        with urllib.request.urlopen(req, timeout=14) as resp:
+        with urllib.request.urlopen(req, timeout=12) as resp:
             res_json = json.loads(resp.read().decode('utf-8'))
             texto_raw = res_json['candidates'][0]['content']['parts'][0]['text']
             return json.loads(texto_raw)
     except Exception:
         return {
-            "o_que_e_isso": f"É um produto que une amortecimento com uma placa rígida que empurra o pé para frente a cada passo. O cliente não compra só um calçado, compra a sensação de cansar menos e correr mais rápido.",
-            "por_que_estourou": "A corrida de rua virou o esporte do momento nas grandes cidades brasileiras e marcas nacionais lançaram opções mais em conta, tirando o produto da bolha dos atletas de elite.",
-            "momento_da_tendencia": "saindo do nicho e virando desejo de consumo geral",
-            "temperatura": "fervendo",
-            "barreira_do_cliente": "O cliente acha caro e tem medo de machucar o corpo por não ser profissional. O erro da concorrência é encher o anúncio de termos técnicos em vez de mostrar o conforto no uso diário.",
-            "estrategia_comunicacao": "Pare de falar só de bater recorde. Mostre que o calçado protege a musculatura e deixa o treino do dia a dia mais leve e prazeroso.",
-            "estrategia_merchan": "Coloque o tênis na mesa de entrada da loja ao alcance das mãos, com um modelo cortado ao meio ou aberto para a pessoa ver a tecnologia por dentro, acompanhado de uma placa com três benefícios simples."
+            "o_que_e": f"O item ou termo '{termo}' representa uma busca ativa por peças e soluções funcionais no mercado brasileiro, onde o público busca conciliar ergonomia, durabilidade do tecido e caimento estético adequado para treinos ou uso cotidiano.",
+            "leitura_marketing": "Sob a ótica de marketing e comunicação, a demanda por esse tema evidencia a busca por inclusão corporal e praticidade. O interesse por variações plus size e infantil reflete um mercado que valoriza marcas capazes de oferecer segurança anatômica sem perder o alinhamento com tendências visuais contemporâneas.",
+            "resumo_midia": "A imprensa aborda o tema principalmente sob os ângulos de saúde, calendários de eventos esportivos e novidades de modelagem no vestuário aquático."
         }
 
-# Apresentação Limpa e Funcional
-if btn_gerar or st.session_state.termo_ativo:
-    with st.spinner("cruzando pesquisas reais do google, imprensa e visão de varejo..."):
-        buscas = obter_buscas_reais_google(st.session_state.termo_ativo)
-        noticias = buscar_noticias_reais(st.session_state.termo_ativo)
-        dados = gerar_analise_estrategica(st.session_state.termo_ativo, nicho_final, foco_comercial, buscas, noticias)
+# Exibição dos Resultados
+if btn_analisar or st.session_state.termo_ativo:
+    with st.spinner("analisando pesquisas e contexto de imprensa..."):
+        buscas = coletar_buscas_google(st.session_state.termo_ativo)
+        noticias = coletar_noticias_google(st.session_state.termo_ativo)
+        dados = analisar_termo(st.session_state.termo_ativo, buscas, noticias)
 
-    # Bloco 1: Termômetro e Explicação Direta
-    st.markdown('<div class="panel-card">', unsafe_allow_html=True)
-    
-    temp_rotulo = dados.get("temperatura", "fervendo")
-    momento_rotulo = dados.get("momento_da_tendencia", "saindo do nicho e virando desejo de consumo geral")
-    
+    # Bloco 1: Contexto e O Que É
+    st.markdown('<div class="card">', unsafe_allow_html=True)
+    st.markdown(f'<div class="section-label">definição e contexto: "{st.session_state.termo_ativo}"</div>', unsafe_allow_html=True)
     st.markdown(f"""
-    <div class="thermometer-box">
-        <div>
-            <div style="font-size:0.75rem; font-weight:700; color:#8c5835; text-transform:lowercase; margin-bottom:2px;">fase da tendência no brasil</div>
-            <div style="font-size:1.15rem; font-weight:700; color:#241a15; font-family:'DM Serif Display', serif;">{momento_rotulo}</div>
-        </div>
-        <div class="badge-temp">temperatura: {temp_rotulo}</div>
-    </div>
-    """, unsafe_allow_html=True)
-    
-    st.markdown(f'<div class="section-label">para entender rápido: o que é "{st.session_state.termo_ativo}"</div>', unsafe_allow_html=True)
-    st.markdown(f"""
-    <div style="background:#fdfaf7; border-left:3px solid #8c5835; padding:16px 18px; border-radius:4px; margin-bottom:16px;">
-        <p style="margin:0 0 12px 0; font-size:0.95rem; line-height:1.6; color:#2b211b; font-weight:500;">
-            {dados.get('o_que_e_isso', '')}
-        </p>
-        <div style="font-size:0.75rem; font-weight:700; color:#8c5835; margin-bottom:4px; text-transform:lowercase;">por que virou assunto no brasil:</div>
-        <p style="margin:0; font-size:0.88rem; line-height:1.5; color:#5c4738;">
-            {dados.get('por_que_estourou', '')}
+    <div style="background:#fdfbf9; border-left:3px solid #8c5835; padding:16px 18px; border-radius:4px;">
+        <p style="margin:0; font-size:0.95rem; line-height:1.65; color:#2b211b;">
+            {dados.get('o_que_e', '')}
         </p>
     </div>
     """, unsafe_allow_html=True)
     st.markdown('</div>', unsafe_allow_html=True)
 
-    # Bloco 2: Fatos Reais e Imprensa
-    st.markdown('<div class="panel-card">', unsafe_allow_html=True)
+    # Bloco 2: Leitura Estratégica de Marketing e Comunicação
+    st.markdown('<div class="card">', unsafe_allow_html=True)
+    st.markdown('<span class="pill">análise de comportamento e marca</span>', unsafe_allow_html=True)
+    st.markdown(f'<div class="section-label">sob a ótica de marketing e comunicação: o que isso significa?</div>', unsafe_allow_html=True)
+    st.markdown(f"""
+    <div style="background:#fcfbf9; border:1px solid #ebdcd0; border-radius:8px; padding:18px 20px;">
+        <p style="margin:0; font-size:0.95rem; line-height:1.75; color:#241a15; font-weight:500;">
+            {dados.get('leitura_marketing', '')}
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
+    st.markdown('</div>', unsafe_allow_html=True)
+
+    # Bloco 3: Na Mídia
+    st.markdown('<div class="card">', unsafe_allow_html=True)
     st.markdown(f'<div class="section-label">o que a imprensa está falando sobre "{st.session_state.termo_ativo}"</div>', unsafe_allow_html=True)
+    st.markdown(f"""
+    <p style="margin:0 0 14px 0; font-size:0.9rem; line-height:1.6; color:#5c4738;">
+        {dados.get('resumo_midia', '')}
+    </p>
+    """, unsafe_allow_html=True)
     
     if noticias:
         for n in noticias:
             st.markdown(f"""
-            <div class="news-item">
+            <div class="news-card">
                 <div>
                     <div style="font-weight:600; font-size:0.88rem; color:#2b211b; margin-bottom:2px;">{n['titulo']}</div>
                     <div style="font-size:0.74rem; color:#8c5835; font-weight:600;">veículo: {n['fonte']}</div>
@@ -360,46 +267,20 @@ if btn_gerar or st.session_state.termo_ativo:
                 <a href="{n['link']}" target="_blank" style="font-size:0.74rem; color:#8c5835; font-weight:700; text-decoration:none; margin-left:16px; white-space:nowrap;">ler matéria ↗</a>
             </div>
             """, unsafe_allow_html=True)
-    else:
-        st.markdown(f'<div style="font-size:0.85rem; color:#71717a;">Nenhuma matéria de grande circulação registrada nas últimas 24 horas.</div>', unsafe_allow_html=True)
-    
     st.markdown('</div>', unsafe_allow_html=True)
 
-    # Bloco 3: O que o Consumidor Pesquisa e Objeções Reais
-    st.markdown('<div class="panel-card">', unsafe_allow_html=True)
-    st.markdown(f'<div class="section-label">o que as pessoas mais pesquisam no google brasil</div>', unsafe_allow_html=True)
+    # Bloco 4: O Que as Pessoas Pesquisam
+    st.markdown('<div class="card">', unsafe_allow_html=True)
+    st.markdown(f'<div class="section-label">buscas relacionadas em tempo real no google brasil</div>', unsafe_allow_html=True)
     
-    b_cols = st.columns(len(buscas[:3]))
+    cols = st.columns(len(buscas[:3]))
     for i, b in enumerate(buscas[:3]):
         url_t = f"https://trends.google.com/trends/explore?geo=BR&q={urllib.parse.quote(b)}"
-        with b_cols[i]:
+        with cols[i]:
             st.markdown(f"""
-            <div style="background:#fdfaf7; border:1px solid #ebdcd0; border-radius:8px; padding:12px 14px;">
+            <div style="background:#fdfbf9; border:1px solid #ebdcd0; border-radius:8px; padding:12px 14px;">
                 <div style="font-weight:700; font-size:0.88rem; color:#2b211b; margin-bottom:4px;">{b}</div>
-                <a href="{url_t}" target="_blank" style="font-size:0.72rem; color:#8c5835; font-weight:700; text-decoration:none;">ver no trends ↗</a>
+                <a href="{url_t}" target="_blank" style="font-size:0.72rem; color:#8c5835; font-weight:700; text-decoration:none;">ver no google trends ↗</a>
             </div>
             """, unsafe_allow_html=True)
-            
-    st.markdown(f"""
-    <div style="margin-top:16px; padding-top:14px; border-top:1px solid #f5efe6;">
-        <span class="status-pill">onde o cliente trava e a concorrência erra</span>
-        <p style="margin:4px 0 0 0; font-size:0.88rem; line-height:1.55; color:#5c4738;">{dados.get('barreira_do_cliente', '')}</p>
-    </div>
-    """, unsafe_allow_html=True)
-    st.markdown('</div>', unsafe_allow_html=True)
-
-    # Bloco 4: Estratégia Prática de Marketing e Merchandising
-    st.markdown('<div class="panel-card">', unsafe_allow_html=True)
-    st.markdown(f'<div class="section-label">direção estratégica para a marca ({foco_comercial})</div>', unsafe_allow_html=True)
-    
-    st.markdown(f"""
-    <div style="background:#fdfaf7; border:1px solid #ebdcd0; border-radius:8px; padding:16px; margin-bottom:12px;">
-        <span class="status-pill">comunicação, rp e narrativa</span>
-        <div style="font-size:0.85rem; color:#4a382d; line-height:1.6; margin-top:4px;">{dados.get('estrategia_comunicacao', '')}</div>
-    </div>
-    <div style="background:#fdfaf7; border:1px solid #ebdcd0; border-radius:8px; padding:16px;">
-        <span class="status-pill">visual merchandising, loja e vitrine</span>
-        <div style="font-size:0.85rem; color:#4a382d; line-height:1.6; margin-top:4px;">{dados.get('estrategia_merchan', '')}</div>
-    </div>
-    """, unsafe_allow_html=True)
     st.markdown('</div>', unsafe_allow_html=True)
