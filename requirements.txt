@@ -1,4 +1,2 @@
 streamlit
-pytrends
-google-genai
-pillow
+google-generativeai
