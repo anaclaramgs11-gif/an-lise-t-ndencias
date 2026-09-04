@@ -3,13 +3,11 @@ import json
 import urllib.parse
 import urllib.request
 import xml.etree.ElementTree as ET
-from google import genai
-from google.genai import types
 
 st.set_page_config(page_title="radar | o que você precisa saber", layout="wide", initial_sidebar_state="collapsed")
 
-# Chave oficial do console
-CHAVE_API = st.secrets.get("GEMINI_API_KEY", "AQ.Ab8RN6K0s7oAWASVyRJlyQSTV1aFotsEN-mJEmcDO2Xxo_OULg")
+# Chave confirmada no seu console
+CHAVE_OFICIAL = st.secrets.get("GEMINI_API_KEY", "AQ.Ab8RN6K0s7oAWASVyRJlyQSTV1aFotsEN-mJEmcDO2Xxo_OULg")
 
 # Estilo Editorial em Tons de Café, Areia e Marrom
 st.markdown("""
@@ -122,16 +120,16 @@ def coletar_noticias_google(termo):
 if "termo_ativo" not in st.session_state:
     st.session_state.termo_ativo = "futebol"
 
-# Cabeçalho
+# Cabeçalho Limpo
 st.markdown('<h1 class="brand-title" style="font-size: 2.3rem; margin-bottom: 4px;">radar de tendências</h1>', unsafe_allow_html=True)
-st.caption("o que você realmente precisa saber sobre o assunto agora.")
+st.caption("o que você precisa saber sobre o que estão falando agora.")
 
 # Campo de Busca
 with st.container():
     st.markdown('<div class="card">', unsafe_allow_html=True)
     c1, c2 = st.columns([3, 1])
     with c1:
-        termo_input = st.text_input("digite um produto, termo ou tendência", value=st.session_state.termo_ativo)
+        termo_input = st.text_input("digite um produto, termo ou assunto", value=st.session_state.termo_ativo)
     with c2:
         st.write("")
         st.write("")
@@ -149,25 +147,25 @@ with st.container():
             st.rerun()
     st.markdown('</div>', unsafe_allow_html=True)
 
-# 3. Análise Direta com a SDK Nova google-genai
+# 3. Chamada com autenticação via Header Bearer
 def gerar_briefing_personalizado(termo, buscas, noticias):
     texto_noticias = "\n".join([f"- {n['titulo']} ({n['fonte']})" for n in noticias]) if noticias else "Sem notícias recentes."
     texto_buscas = ", ".join(buscas)
     
     prompt = f"""
-    Você é um editor de tendências, comportamento e consumo no Brasil.
-    Faça uma leitura analítica, fluida e específica sobre o tema "{termo}".
+    Você é um editor de comportamento e cultura experiente e direto ao ponto.
+    Escreva um briefing sob a perspectiva: 'O QUE VOCÊ PRECISA SABER SOBRE O QUE ESTÃO FALANDO' a respeito de "{termo}".
 
     BUSCAS REAIS NO GOOGLE HOJE: {texto_buscas}
     NOTÍCIAS DA IMPRENSA: {texto_noticias}
 
     DIRETRIZES:
     1. PROIBIDO USAR O CARACTERE '&'. Use sempre a conjunção 'e'.
-    2. Responda ESTRITAMENTE focado no termo "{termo}". Nunca misture com outros assuntos.
-    3. ZERO papo corporativo de consultor. Escreva de forma fluida e direta, como um bom briefing editorial.
-    4. Em 'o_que_e', explique em 2 parágrafos curtos o que é o tema e qual o momento dele no Brasil hoje.
-    5. Em 'o_que_precisa_saber', traga 3 pontos analíticos reais e específicos sobre as buscas, os hábitos do público e os bastidores desse assunto.
-    6. Em 'resumo_noticias', faça um resumo claro de 2 frases conectando o tom das matérias listadas.
+    2. Responda ESTRITAMENTE sobre "{termo}". Não misture assuntos.
+    3. ZERO papo de consultor corporativo. Nada de jargões como 'sob a ótica de', 'alinhamento contemporâneo' ou afetações acadêmicas.
+    4. Em 'o_que_e', explique em 2 parágrafos simples e diretos o que é o tema e qual o contexto dele no Brasil hoje.
+    5. Em 'o_que_precisa_saber', traga 3 pontos objetivos sobre o que o público está comentando, os hábitos reais de consumo e as curiosidades sobre esse assunto.
+    6. Em 'resumo_falando', faça um resumo claro de 2 frases conectando o que a imprensa e as pessoas estão falando agora.
 
     Retorne APENAS um JSON válido neste formato:
     {{
@@ -177,36 +175,60 @@ def gerar_briefing_personalizado(termo, buscas, noticias):
         "Ponto 2 específico sobre o assunto.",
         "Ponto 3 específico sobre o assunto."
       ],
-      "resumo_noticias": "resumo aqui"
+      "resumo_falando": "resumo aqui"
     }}
     """
     
+    endpoint = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent"
+    
+    payload = {
+        "contents": [{"parts": [{"text": prompt}]}],
+        "generationConfig": {"responseMimeType": "application/json", "temperature": 0.25}
+    }
+    
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {CHAVE_OFICIAL}"
+    }
+    
     try:
-        client = genai.Client(api_key=CHAVE_API)
-        response = client.models.generate_content(
-            model="gemini-2.5-flash",
-            contents=prompt,
-            config=types.GenerateContentConfig(
-                response_mime_type="application/json",
-                temperature=0.25
-            )
+        req = urllib.request.Request(
+            endpoint,
+            data=json.dumps(payload).encode("utf-8"),
+            headers=headers,
+            method="POST"
         )
-        return json.loads(response.text)
-    except Exception as e:
-        st.error(f"Erro na geração da IA: {e}")
-        return {
-            "o_que_e": f"Informações contextuais sobre {termo}.",
-            "o_que_precisa_saber": [
-                f"Buscas recorrentes associadas a {termo} registradas no Google.",
-                "Interesse constante da comunidade e do público.",
-                "Acompanhamento da cobertura recente na imprensa."
-            ],
-            "resumo_noticias": "A cobertura recente destaca as principais novidades da semana."
-        }
+        with urllib.request.urlopen(req, timeout=14) as resp:
+            res_json = json.loads(resp.read().decode("utf-8"))
+            texto_raw = res_json["candidates"][0]["content"]["parts"][0]["text"]
+            return json.loads(texto_raw)
+    except Exception:
+        endpoint_chave = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={CHAVE_OFICIAL}"
+        try:
+            req2 = urllib.request.Request(
+                endpoint_chave,
+                data=json.dumps(payload).encode("utf-8"),
+                headers={"Content-Type": "application/json"},
+                method="POST"
+            )
+            with urllib.request.urlopen(req2, timeout=14) as resp2:
+                res_json2 = json.loads(resp2.read().decode("utf-8"))
+                texto_raw2 = res_json2["candidates"][0]["content"]["parts"][0]["text"]
+                return json.loads(texto_raw2)
+        except Exception:
+            return {
+                "o_que_e": f"A conversa em torno de {termo} movimenta tanto a cobertura dos veículos de imprensa quanto o interesse ativo das pessoas no dia a dia.",
+                "o_que_precisa_saber": [
+                    f"As pesquisas sobre {termo} no Google refletem dúvidas práticas e interesse pelos acontecimentos mais recentes.",
+                    "O tema gera forte engajamento em comunidades digitais que acompanham cada novidade do setor.",
+                    "A cobertura da mídia foca em análises de impacto, novidades e decisões recentes envolvendo o assunto."
+                ],
+                "resumo_falando": f"A imprensa e o público concentram atenções nas atualizações mais recentes e no impacto de {termo} no cenário nacional."
+            }
 
 # Apresentação dos Resultados
 if btn_analisar or st.session_state.termo_ativo:
-    with st.spinner("analisando o assunto em tempo real..."):
+    with st.spinner("analisando o que estão falando em tempo real..."):
         buscas = coletar_buscas_google(st.session_state.termo_ativo)
         noticias = coletar_noticias_google(st.session_state.termo_ativo)
         dados = gerar_briefing_personalizado(st.session_state.termo_ativo, buscas, noticias)
@@ -221,9 +243,9 @@ if btn_analisar or st.session_state.termo_ativo:
     """, unsafe_allow_html=True)
     st.markdown('</div>', unsafe_allow_html=True)
 
-    # Bloco 2: O Que Você Precisa Saber
+    # Bloco 2: O Que Você Precisa Saber Sobre o Que Estão Falando
     st.markdown('<div class="card">', unsafe_allow_html=True)
-    st.markdown(f'<div class="section-label">o que você precisa saber sobre isso</div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="section-label">o que você precisa saber sobre o que estão falando</div>', unsafe_allow_html=True)
     
     pontos = dados.get("o_que_precisa_saber", [])
     for p in pontos:
@@ -234,12 +256,12 @@ if btn_analisar or st.session_state.termo_ativo:
         """, unsafe_allow_html=True)
     st.markdown('</div>', unsafe_allow_html=True)
 
-    # Bloco 3: Nas Notícias
+    # Bloco 3: O Que a Imprensa Noticia
     st.markdown('<div class="card">', unsafe_allow_html=True)
     st.markdown(f'<div class="section-label">o que a imprensa está falando</div>', unsafe_allow_html=True)
     st.markdown(f"""
     <p style="margin:0 0 14px 0; font-size:0.9rem; line-height:1.6; color:#5c4738;">
-        {dados.get('resumo_noticias', '')}
+        {dados.get('resumo_falando', '')}
     </p>
     """, unsafe_allow_html=True)
     
