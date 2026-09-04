@@ -3,8 +3,13 @@ import json
 import urllib.parse
 import urllib.request
 import xml.etree.ElementTree as ET
+import google.generativeai as genai
 
 st.set_page_config(page_title="radar | o que você precisa saber", layout="wide", initial_sidebar_state="collapsed")
+
+# Configuração oficial da inteligência
+API_KEY = "AQ.Ab8RN6IfRuC1ubQJSIbZZsUF3cKASRsBl94HHb1qdh-4eao7hw"
+genai.configure(api_key=API_KEY)
 
 # Estilo Editorial Limpo em Tons de Café, Areia e Marrom
 st.markdown("""
@@ -77,7 +82,7 @@ def coletar_buscas_google(termo):
     resultados = []
     try:
         req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
-        with urllib.request.urlopen(req, timeout=5) as resp:
+        with urllib.request.urlopen(req, timeout=6) as resp:
             data = json.loads(resp.read().decode('utf-8'))
             if len(data) > 1 and isinstance(data[1], list):
                 for item in data[1]:
@@ -89,7 +94,7 @@ def coletar_buscas_google(termo):
     except Exception:
         pass
     if not resultados:
-        resultados = [f"{termo} feminino", f"{termo} preço", f"{termo} modelos"]
+        resultados = [f"{termo} hoje", f"{termo} brasil", f"{termo} novidades"]
     return resultados
 
 # 2. Base Real: Google Notícias Brasil
@@ -99,7 +104,7 @@ def coletar_noticias_google(termo):
     noticias = []
     try:
         req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
-        with urllib.request.urlopen(req, timeout=5) as resp:
+        with urllib.request.urlopen(req, timeout=6) as resp:
             root = ET.fromstring(resp.read())
             for item in root.findall('./channel/item')[:3]:
                 t = item.find('title').text if item.find('title') is not None else ""
@@ -115,9 +120,9 @@ def coletar_noticias_google(termo):
     return noticias
 
 if "termo_ativo" not in st.session_state:
-    st.session_state.termo_ativo = "maiô natação"
+    st.session_state.termo_ativo = "futebol"
 
-# Cabeçalho Limpo
+# Cabeçalho
 st.markdown('<h1 class="brand-title" style="font-size: 2.3rem; margin-bottom: 4px;">radar de tendências</h1>', unsafe_allow_html=True)
 st.caption("o que você realmente precisa saber sobre o assunto agora.")
 
@@ -136,7 +141,7 @@ with st.container():
     
     # Atalhos rápidos
     st.markdown('<div class="section-label" style="margin-top: 10px;">exemplos:</div>', unsafe_allow_html=True)
-    exemplos = ["maiô natação", "blush blindness", "alfaiataria oversized", "tênis de placa de carbono"]
+    exemplos = ["futebol", "maiô natação", "blush blindness", "alfaiataria oversized"]
     cols_ex = st.columns(len(exemplos))
     for i, ex in enumerate(exemplos):
         if cols_ex[i].button(f"↗ {ex}", key=f"ex_{i}"):
@@ -144,75 +149,67 @@ with st.container():
             st.rerun()
     st.markdown('</div>', unsafe_allow_html=True)
 
-# 3. Análise Direta sem jargão de consultoria
-def gerar_briefing_direto(termo, buscas, noticias):
-    chave = "AQ.Ab8RN6IfRuC1ubQJSIbZZsUF3cKASRsBl94HHb1qdh-4eao7hw"
-    endpoint = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={chave}"
-    
+# 3. Análise Direta Usando a SDK Oficial do Gemini
+def gerar_briefing_personalizado(termo, buscas, noticias):
     texto_noticias = "\n".join([f"- {n['titulo']} ({n['fonte']})" for n in noticias]) if noticias else "Sem notícias recentes."
     texto_buscas = ", ".join(buscas)
     
     prompt = f"""
-    Você é um editor de tendências e comportamento experiente, curioso e direto ao ponto.
-    Escreva um panorama no estilo 'O QUE VOCÊ PRECISA SABER SOBRE' o tema "{termo}".
-
-    BUSCAS REAIS NO GOOGLE: {texto_buscas}
+    Você é um editor de tendências, comportamento e cultura de consumo no Brasil.
+    Faça uma leitura personalizada, inteligente e fluida sobre o tema "{termo}".
+    
+    BUSCAS REAIS NO GOOGLE HOJE: {texto_buscas}
     NOTÍCIAS DA IMPRENSA: {texto_noticias}
 
-    REGRAS:
-    1. PROIBIDO O CARACTERE '&'. Use sempre 'e'.
-    2. ZERO papo de consultor chato. Nada de 'sob a ótica de', 'alinhamento contemporâneo', 'evidencia a busca'.
-    3. Fale de forma simples, fluida e interessante, como alguém explicando para um amigo o que está rolando com esse assunto.
-    4. Responda ESTRITAMENTE sobre "{termo}".
-    5. No campo 'o_que_e', explique em 2 a 3 frases o que é o produto ou termo e por que ele é relevante.
-    6. No campo 'o_que_precisa_saber', traga 3 pontos rápidos e objetivos sobre o comportamento das pessoas e o que está acontecendo com esse mercado no Brasil.
-    7. No campo 'resumo_noticias', diga em 2 frases simples o que a mídia está destacando.
+    DIRETRIZES:
+    1. PROIBIDO USAR O CARACTERE '&'. Use sempre a conjunção 'e'.
+    2. Responda ESTRITAMENTE focado no termo "{termo}". Se for futebol, fale sobre futebol, transferências, transmissões e consumo esportivo. Se for maiô, fale sobre vestuário de natação. NUNCA misture os assuntos.
+    3. ZERO jargão corporativo ou papo de consultoria. Escreva de forma fluida, como uma boa newsletter que explica o assunto para quem quer entender o que está acontecendo.
+    4. Em 'o_que_e', explique em 2 parágrafos curtos o que é o tema e qual o momento dele no Brasil hoje.
+    5. Em 'o_que_precisa_saber', traga 3 pontos analíticos reais e específicos sobre as buscas, os hábitos do público e os bastidores desse assunto.
+    6. Em 'resumo_noticias', faça um resumo claro de 2 frases conectando o tom das matérias da imprensa listadas.
 
-    Retorne ESTRITAMENTE JSON:
+    Retorne APENAS um JSON válido neste formato exato:
     {{
-      "o_que_e": "Explicação direta e simples do produto ou termo.",
+      "o_que_e": "texto aqui",
       "o_que_precisa_saber": [
-        "Ponto 1 direto e interessante sobre o comportamento do público.",
-        "Ponto 2 direto sobre o mercado ou preferências de compra.",
-        "Ponto 3 direto sobre como as marcas e produtos estão se posicionando."
+        "Ponto 1 específico sobre o assunto.",
+        "Ponto 2 específico sobre o assunto.",
+        "Ponto 3 específico sobre o assunto."
       ],
-      "resumo_noticias": "O resumo claro do que a imprensa tem falado sobre o assunto."
+      "resumo_noticias": "resumo aqui"
     }}
     """
     
-    payload = {
-        "contents": [{"parts": [{"text": prompt}]}],
-        "generationConfig": {"responseMimeType": "application/json", "temperature": 0.2}
-    }
-    
     try:
-        req = urllib.request.Request(
-            endpoint,
-            data=json.dumps(payload).encode('utf-8'),
-            headers={'Content-Type': 'application/json'},
-            method='POST'
+        model = genai.GenerativeModel("gemini-1.5-flash")
+        response = model.generate_content(
+            prompt,
+            generation_config=genai.GenerationConfig(
+                response_mime_type="application/json",
+                temperature=0.25
+            )
         )
-        with urllib.request.urlopen(req, timeout=12) as resp:
-            res_json = json.loads(resp.read().decode('utf-8'))
-            texto_raw = res_json['candidates'][0]['content']['parts'][0]['text']
-            return json.loads(texto_raw)
-    except Exception:
+        return json.loads(response.text)
+    except Exception as e:
+        # Mostra o erro real na tela caso ocorra algum problema de configuração
+        st.error(f"Detalhe da conexão: {e}")
         return {
-            "o_que_e": f"A procura por {termo} gira em torno de produtos práticos e confortáveis para o dia a dia, onde quem compra busca resistência e caimento ideal para a atividade.",
+            "o_que_e": f"Informações contextuais sobre {termo}.",
             "o_que_precisa_saber": [
-                f"As buscas por modelos específicos mostram que o público quer opções que unam durabilidade e modelagem segura.",
-                "Existe uma procura crescente por tamanhos inclusivos e opções para públicos variados, como infantil e plus size.",
-                "O consumidor pesquisa muito antes de comprar para garantir tecidos que aguentem cloro e uso frequente."
+                f"Buscas recorrentes associadas a {termo} no Brasil.",
+                "Interesse constante da comunidade digital e de consumo.",
+                "Movimentações recentes acompanhadas pela imprensa esportiva e de estilo de vida."
             ],
-            "resumo_noticias": "A cobertura recente foca em lançamentos esportivos, rotinas de saúde e competições de natação."
+            "resumo_noticias": "A cobertura recente destaca os principais fatos e novidades da semana."
         }
 
-# Apresentação
+# Apresentação dos Resultados
 if btn_analisar or st.session_state.termo_ativo:
-    with st.spinner("reunindo informações sobre o assunto..."):
+    with st.spinner("analisando o assunto em tempo real..."):
         buscas = coletar_buscas_google(st.session_state.termo_ativo)
         noticias = coletar_noticias_google(st.session_state.termo_ativo)
-        dados = gerar_briefing_direto(st.session_state.termo_ativo, buscas, noticias)
+        dados = gerar_briefing_personalizado(st.session_state.termo_ativo, buscas, noticias)
 
     # Bloco 1: O Que É
     st.markdown('<div class="card">', unsafe_allow_html=True)
